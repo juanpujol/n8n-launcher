@@ -1,8 +1,34 @@
 # N8N Launcher
 
-A cross-platform desktop application to easily start your local N8N instance. Built with Tauri (Rust backend) and React (TypeScript frontend), this launcher provides a user-friendly interface for Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack.
+A cross-platform desktop application to easily start your local N8N instance. This launcher provides a user-friendly interface for Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack.
 
 ![N8N Launcher Screenshot](app-print.jpg)
+
+## ⚠️ Important Security Notice
+
+**N8N Launcher is a simple prototype built without official Apple or Microsoft code signing certificates.** This means your operating system will show security warnings when you first run the application.
+
+### 🍎 macOS Installation
+
+1. **Download and open the .dmg file**
+2. **Drag N8N Launcher to Applications folder**
+3. **When you first run the app**, macOS will show: *"N8N Launcher cannot be opened because it is from an unidentified developer"*
+4. **To authorize the app:**
+   - Go to **System Preferences** → **Security & Privacy** → **General**
+   - You'll see a message about N8N Launcher being blocked
+   - Click **"Open Anyway"**
+   - Confirm by clicking **"Open"** in the dialog
+
+### 🪟 Windows Installation
+
+1. **Download and run the .msi installer**
+2. **Windows may show**: *"Windows protected your PC"* or *"Unknown publisher"*
+3. **To authorize the app:**
+   - Click **"More info"** on the Windows Defender SmartScreen dialog
+   - Click **"Run anyway"**
+   - Complete the installation as normal
+
+> **Why this happens:** Since this is a prototype application, I haven't purchased expensive code signing certificates from Apple or Microsoft. The app is completely safe to use - your OS is just being cautious about unsigned applications.
 
 ## 📥 Download
 
@@ -159,25 +185,3 @@ Releases are automated via GitHub Actions. To create a new release:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-MIT License
-
-Copyright (c) 2025 N8N Launcher
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
