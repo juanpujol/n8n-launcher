@@ -11,8 +11,9 @@ import {
   RefreshCw,
   Square,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
+import { LogsCard } from "./LogsCard";
 import { StateController } from "./StateController";
 import { StatusIndicator } from "./StatusIndicator";
 
@@ -81,40 +82,7 @@ export function N8NLauncher() {
   );
   const [showStopProgress, setShowStopProgress] = useState(false);
 
-  // Refs for auto-scrolling
-  const logsScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
-  const progressScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
-  const stopProgressScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
 
-  // Auto-scroll helper function
-  const scrollToBottom = useCallback((ref: React.RefObject<React.ComponentRef<typeof ScrollArea> | null>) => {
-    if (ref.current) {
-      // Find the ScrollArea viewport which is the actual scrollable container
-      const viewport = ref.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-  }, []);
-
-  // Auto-scroll effects
-  useEffect(() => {
-    if (logs) {
-      setTimeout(() => scrollToBottom(logsScrollRef), 100);
-    }
-  }, [logs, scrollToBottom]);
-
-  useEffect(() => {
-    if (progressMessages.length > 0) {
-      setTimeout(() => scrollToBottom(progressScrollRef), 100);
-    }
-  }, [progressMessages, scrollToBottom]);
-
-  useEffect(() => {
-    if (stopProgressMessages.length > 0) {
-      setTimeout(() => scrollToBottom(stopProgressScrollRef), 100);
-    }
-  }, [stopProgressMessages, scrollToBottom]);
 
   const refreshLogs = async () => {
     try {
@@ -122,6 +90,22 @@ export function N8NLauncher() {
       setLogs(dockerLogs);
     } catch (error) {
       console.log("Could not refresh logs:", error);
+    }
+  };
+
+  const handleRefreshLogs = async () => {
+    setLogsLoading(true);
+    try {
+      await refreshLogs();
+    } catch (error) {
+      console.error("Failed to refresh logs:", error);
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Failed to load logs. Make sure Docker Compose is running.";
+      setLogs(errorMsg);
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -385,140 +369,37 @@ export function N8NLauncher() {
             </AnimatedCard>
 
             {/* Logs Preview */}
-            {import.meta.env.DEV && showLogs && (
-              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Docker Logs
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        setLogsLoading(true);
-                        try {
-                          await refreshLogs();
-                        } catch (error) {
-                          console.error("Failed to refresh logs:", error);
-                          const errorMsg =
-                            error instanceof Error
-                              ? error.message
-                              : "Failed to load logs. Make sure Docker Compose is running.";
-                          setLogs(errorMsg);
-                        } finally {
-                          setLogsLoading(false);
-                        }
-                      }}
-                      disabled={logsLoading}
-                      className="h-7 px-2 text-xs"
-                    >
-                      <RefreshCw
-                        className={`h-3 w-3 ${
-                          logsLoading ? "animate-spin" : ""
-                        }`}
-                      />
-                    </Button>
-                  </div>
-                  <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea ref={logsScrollRef} className="h-60 p-4">
-                      <div className="font-mono text-xs w-full min-w-0">
-                        {logsLoading ? (
-                          <div className="text-muted-foreground">
-                            Loading logs...
-                          </div>
-                        ) : logs ? (
-                          <pre className="whitespace-pre-wrap text-muted-foreground break-words overflow-hidden">
-                            {logs}
-                          </pre>
-                        ) : (
-                          <div className="text-muted-foreground">
-                            No logs available
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
+            {import.meta.env.DEV && (
+              <LogsCard
+                logs={logs}
+                loading={logsLoading}
+                visible={showLogs}
+                title="Docker Logs"
+                onRefresh={handleRefreshLogs}
+                showRefreshButton={true}
+              />
             )}
 
             {/* Start Progress Display */}
             <AnimatedCard show={showProgress}>
-              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Starting N8N...
-                    </h3>
-                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-                  </div>
-                  <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea ref={progressScrollRef} className="h-60 px-4">
-                      <div className="font-mono text-xs w-full min-w-0 py-4">
-                        {progressMessages.length > 0 ? (
-                          <div className="space-y-1">
-                            {progressMessages.map((message, index) => (
-                              <div
-                                key={`progress-${index}-${message.slice(
-                                  0,
-                                  20
-                                )}`}
-                                className="text-muted-foreground break-words overflow-hidden w-[280px]"
-                              >
-                                {message}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-muted-foreground">
-                            Initializing...
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
+              <LogsCard
+                logs={progressMessages}
+                loading={loading}
+                visible={true}
+                title="Starting N8N..."
+                showRefreshButton={false}
+              />
             </AnimatedCard>
 
             {/* Stop Progress Display */}
             <AnimatedCard show={showStopProgress}>
-              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Stopping N8N...
-                    </h3>
-                    <RefreshCw className="h-4 w-4 animate-spin text-orange-500" />
-                  </div>
-                  <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea ref={stopProgressScrollRef} className="h-60 px-4">
-                      <div className="font-mono text-xs w-full min-w-0 py-4">
-                        {stopProgressMessages.length > 0 ? (
-                          <div className="space-y-1">
-                            {stopProgressMessages.map((message, index) => (
-                              <div
-                                key={`stop-progress-${index}-${message.slice(
-                                  0,
-                                  20
-                                )}`}
-                                className="text-muted-foreground break-words overflow-hidden w-[280px]"
-                              >
-                                {message}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-muted-foreground">
-                            Stopping services...
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
+              <LogsCard
+                logs={stopProgressMessages}
+                loading={loading}
+                visible={true}
+                title="Stopping N8N..."
+                showRefreshButton={false}
+              />
             </AnimatedCard>
           </div>
         </div>
