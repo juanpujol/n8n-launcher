@@ -31,6 +31,7 @@ export function N8NLauncher() {
 	const [showLogs, setShowLogs] = useState(false);
 	const [logs, setLogs] = useState<string>("");
 	const [logsLoading, setLogsLoading] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string>("");
 
 	const refreshLogs = async () => {
 		try {
@@ -46,22 +47,26 @@ export function N8NLauncher() {
 			return;
 		}
 
+		setErrorMessage(""); // Clear any previous errors
 		try {
 			// If logs are visible, pass refresh callback
 			const logsRefreshCallback = showLogs ? refreshLogs : undefined;
 			await startN8N(logsRefreshCallback);
 		} catch (error) {
 			console.error("Failed to start N8N:", error);
+			setErrorMessage(error instanceof Error ? error.message : String(error));
 		}
 	};
 
 	const handleStopN8N = async () => {
+		setErrorMessage(""); // Clear any previous errors
 		try {
 			// If logs are visible, pass refresh callback
 			const logsRefreshCallback = showLogs ? refreshLogs : undefined;
 			await stopN8N(logsRefreshCallback);
 		} catch (error) {
 			console.error("Failed to stop N8N:", error);
+			setErrorMessage(error instanceof Error ? error.message : String(error));
 		}
 	};
 
@@ -72,7 +77,8 @@ export function N8NLauncher() {
 				await refreshLogs();
 			} catch (error) {
 				console.error("Failed to get logs:", error);
-				setLogs("Failed to load logs. Make sure Docker Compose is running.");
+				const errorMsg = error instanceof Error ? error.message : "Failed to load logs. Make sure Docker Compose is running.";
+				setLogs(errorMsg);
 			} finally {
 				setLogsLoading(false);
 			}
@@ -126,14 +132,17 @@ export function N8NLauncher() {
 
 	return (
 		<>
-			<StateController
-				onStateChange={setManualState}
-				onLoadingChange={setManualLoading}
-				onSimulationToggle={toggleSimulation}
-				currentStates={status}
-				loading={loading}
-				simulationEnabled={simulationMode}
-			/>
+			{/* Show debug controls only in development */}
+			{import.meta.env.DEV && (
+				<StateController
+					onStateChange={setManualState}
+					onLoadingChange={setManualLoading}
+					onSimulationToggle={toggleSimulation}
+					currentStates={status}
+					loading={loading}
+					simulationEnabled={simulationMode}
+				/>
+			)}
 			<div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
 				<div className="w-full max-w-sm space-y-6">
 					{/* Header */}
@@ -190,6 +199,13 @@ export function N8NLauncher() {
 									label="N8N Service"
 									className="bg-card/20"
 								/>
+								
+								{/* Show error message if present */}
+								{errorMessage && (
+									<div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+										<p className="text-sm text-red-400">{errorMessage}</p>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					)}
@@ -268,9 +284,8 @@ export function N8NLauncher() {
 												await refreshLogs();
 											} catch (error) {
 												console.error("Failed to refresh logs:", error);
-												setLogs(
-													"Failed to load logs. Make sure Docker Compose is running.",
-												);
+												const errorMsg = error instanceof Error ? error.message : "Failed to load logs. Make sure Docker Compose is running.";
+												setLogs(errorMsg);
 											} finally {
 												setLogsLoading(false);
 											}
