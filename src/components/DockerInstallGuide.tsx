@@ -1,8 +1,8 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { Download } from "lucide-react";
 
 export function DockerInstallGuide() {
 	const getDockerInstallUrl = () => {
@@ -12,10 +12,19 @@ export function DockerInstallGuide() {
 		console.log("Platform:", platform, "UserAgent:", userAgent);
 
 		// More comprehensive OS detection with direct download links
-		if (platform.includes("mac") || userAgent.includes("mac") || userAgent.includes("darwin")) {
+		if (
+			platform.includes("mac") ||
+			userAgent.includes("mac") ||
+			userAgent.includes("darwin")
+		) {
 			// For Mac, use the direct Docker Desktop download
 			return "https://desktop.docker.com/mac/main/amd64/Docker.dmg";
-		} else if (platform.includes("win") || userAgent.includes("windows") || userAgent.includes("win32") || userAgent.includes("win64")) {
+		} else if (
+			platform.includes("win") ||
+			userAgent.includes("windows") ||
+			userAgent.includes("win32") ||
+			userAgent.includes("win64")
+		) {
 			// For Windows, use the direct Docker Desktop download
 			return "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe";
 		} else {
@@ -41,7 +50,9 @@ export function DockerInstallGuide() {
 			<CardContent className="p-6 space-y-4">
 				<div className="text-center space-y-2">
 					<Download className="h-12 w-12 text-primary mx-auto" />
-					<h2 className="text-xl font-bold text-foreground">Docker Not Found</h2>
+					<h2 className="text-xl font-bold text-foreground">
+						Docker Not Found
+					</h2>
 					<p className="text-muted-foreground">
 						Docker needs to be installed to run N8N.
 					</p>
@@ -49,8 +60,8 @@ export function DockerInstallGuide() {
 
 				<Alert>
 					<AlertDescription>
-						Docker includes everything you need to run containerized applications
-						like N8N.
+						Docker includes everything you need to run containerized
+						applications like N8N.
 					</AlertDescription>
 				</Alert>
 
