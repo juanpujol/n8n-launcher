@@ -274,15 +274,17 @@ export function N8NLauncher() {
 											: "View Logs"}
 								</Button>
 
-								<Button
-									variant="outline"
-									size="lg"
-									className="w-full"
-									onClick={handleDebugPaths}
-								>
-									<Bug className="mr-2 h-5 w-5" />
-									{showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
-								</Button>
+								{import.meta.env.DEV && (
+									<Button
+										variant="outline"
+										size="lg"
+										className="w-full"
+										onClick={handleDebugPaths}
+									>
+										<Bug className="mr-2 h-5 w-5" />
+										{showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
+									</Button>
+								)}
 							</div>
 						</CardContent>
 					</Card>
@@ -402,7 +404,7 @@ export function N8NLauncher() {
 					)}
 
 					{/* Debug Info */}
-					{showDebugInfo && (
+					{import.meta.env.DEV && showDebugInfo && (
 						<Card className="bg-gradient-card border-border/50">
 							<CardContent className="p-4">
 								<div className="flex items-center justify-between mb-3">
