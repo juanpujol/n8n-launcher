@@ -11,7 +11,7 @@
 	--color-popover-foreground: hsl(240 10% 95%);
 	--color-primary: hsl(266 83% 58%);
 	--color-primary-foreground: hsl(240 10% 95%);
-	--color-secondary: hsl(240 8% 18%);
+	--color-secondary: hsl(230 8% 18%);
 	--color-secondary-foreground: hsl(240 10% 85%);
 	--color-muted: hsl(240 8% 18%);
 	--color-muted-foreground: hsl(240 5% 65%);
@@ -45,9 +45,26 @@
 	--color-chart-5: hsl(340 75% 55%);
 
 	/* Background images - Migrated from Tailwind v3 config */
-	--background-image-gradient-primary: linear-gradient(135deg, hsl(266 83% 58%), hsl(266 100% 70%));
-	--background-image-gradient-background: linear-gradient(135deg, hsl(240 10% 8%), hsl(240 15% 12%));
-	--background-image-gradient-card: linear-gradient(145deg, hsl(240 8% 12%), hsl(240 12% 16%));
+	--background-image-gradient-primary: linear-gradient(
+		135deg,
+		hsl(266 83% 58%),
+		hsl(266 100% 70%)
+	);
+	--background-image-gradient-secondary: linear-gradient(
+		135deg,
+		hsl(230 8% 18%),
+		hsl(230 12% 22%)
+	);
+	--background-image-gradient-background: linear-gradient(
+		135deg,
+		hsl(240 10% 8%),
+		hsl(240 15% 12%)
+	);
+	--background-image-gradient-card: linear-gradient(
+		145deg,
+		hsl(240 8% 12%),
+		hsl(240 12% 16%)
+	);
 
 	/* Border radius - Migrated from Tailwind v3 config */
 	--radius: 0.75rem;
@@ -86,7 +103,7 @@
 		--color-destructive: hsl(0 62.8% 30.6%);
 		--color-destructive-foreground: hsl(210 40% 98%);
 		/* Keep success and warning from main theme - reference app doesn't override these */
-		--color-border: hsl(217.2 32.6% 17.5%);
+		--color-border: hsl(240 8% 18%);
 		--color-input: hsl(217.2 32.6% 17.5%);
 		--color-ring: hsl(212.7 26.8% 83.9%);
 		--color-sidebar: hsl(240 5.9% 10%);
@@ -130,6 +147,10 @@
 
 @utility bg-gradient-primary {
 	background-image: var(--background-image-gradient-primary);
+}
+
+@utility bg-gradient-secondary {
+	background-image: var(--background-image-gradient-secondary);
 }
 
 /* Base styles */
