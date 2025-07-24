@@ -14,11 +14,9 @@
 			{
 				"fullscreen": false,
 				"height": 680,
-				"resizable": true,
+				"resizable": false,
 				"title": "N8N Launcher",
-				"width": 390,
-				"minWidth": 350,
-				"minHeight": 600
+				"width": 390
 			}
 		],
 		"security": {
