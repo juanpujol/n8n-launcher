@@ -47,7 +47,7 @@
 		"macOS": {
 			"frameworks": [],
 			"minimumSystemVersion": "",
-			"signingIdentity": null
+			"signingIdentity": "-"
 		},
 		"windows": {
 			"certificateThumbprint": null,
