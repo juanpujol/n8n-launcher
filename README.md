@@ -1,6 +1,8 @@
 # N8N Launcher
 
-A cross-platform desktop application for managing N8N automation workflows via Docker. Built with Tauri (Rust backend) and React (TypeScript frontend), this launcher provides a user-friendly interface for Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack.
+A cross-platform desktop application to easily start your local N8N instance. Built with Tauri (Rust backend) and React (TypeScript frontend), this launcher provides a user-friendly interface for Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack.
+
+![N8N Launcher Screenshot](app-print.jpg)
 
 ## Features
 
@@ -88,7 +90,7 @@ bun run lint
 ### Docker Stack
 The application manages a complete N8N environment with:
 - **PostgreSQL 16**: Database with health checks
-- **Redis 7**: Queue management with authentication  
+- **Redis 7**: Queue management with authentication
 - **N8N Editor**: Main interface (port 5678)
 - **N8N Webhook**: Dedicated webhook processor
 - **N8N Worker**: Background job processor
@@ -145,4 +147,26 @@ Releases are automated via GitHub Actions. To create a new release:
 
 ## License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+MIT License
+
+Copyright (c) 2025 N8N Launcher
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

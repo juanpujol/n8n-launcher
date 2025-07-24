@@ -38,7 +38,7 @@
 		],
 		"longDescription": "",
 		"resources": ["docker-compose.yaml"],
-		"shortDescription": "",
+		"shortDescription": "A cross-platform desktop application to easily start your local N8N instance",
 		"targets": "all",
 		"createUpdaterArtifacts": false,
 		"publisher": null,
