@@ -23,6 +23,7 @@ export function N8NLauncher() {
 		simulationMode,
 		checkDockerStatus,
 		startN8N,
+		startN8NWithProgress,
 		stopN8N,
 		getLogs,
 		getDebugPaths,
@@ -36,6 +37,8 @@ export function N8NLauncher() {
 	const [errorMessage, setErrorMessage] = useState<string>("");
 	const [showDebugInfo, setShowDebugInfo] = useState(false);
 	const [debugInfo, setDebugInfo] = useState<string>("");
+	const [progressMessages, setProgressMessages] = useState<string[]>([]);
+	const [showProgress, setShowProgress] = useState(false);
 
 	const refreshLogs = async () => {
 		try {
@@ -52,13 +55,29 @@ export function N8NLauncher() {
 		}
 
 		setErrorMessage(""); // Clear any previous errors
+		setProgressMessages([]);
+		setShowProgress(true);
+		
 		try {
+			// Progress callback to collect messages
+			const onProgress = (message: string) => {
+				setProgressMessages(prev => [...prev, message]);
+			};
+			
 			// If logs are visible, pass refresh callback
 			const logsRefreshCallback = showLogs ? refreshLogs : undefined;
-			await startN8N(logsRefreshCallback);
+			
+			await startN8NWithProgress(onProgress, logsRefreshCallback);
+			
+			// Hide progress after successful completion
+			setTimeout(() => {
+				setShowProgress(false);
+				setProgressMessages([]);
+			}, 3000);
 		} catch (error) {
 			console.error("Failed to start N8N:", error);
 			setErrorMessage(error instanceof Error ? error.message : String(error));
+			setShowProgress(false);
 		}
 	};
 
@@ -336,6 +355,35 @@ export function N8NLauncher() {
 									) : (
 										<div className="text-muted-foreground">
 											No logs available
+										</div>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					)}
+
+					{/* Progress Display */}
+					{showProgress && (
+						<Card className="bg-gradient-card border-border/50">
+							<CardContent className="p-4">
+								<div className="flex items-center justify-between mb-3">
+									<h3 className="text-sm font-semibold text-foreground">
+										Starting N8N...
+									</h3>
+									<RefreshCw className="h-4 w-4 animate-spin text-primary" />
+								</div>
+								<div className="bg-black/20 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
+									{progressMessages.length > 0 ? (
+										<div className="space-y-1">
+											{progressMessages.map((message, index) => (
+												<div key={index} className="text-muted-foreground">
+													{message}
+												</div>
+											))}
+										</div>
+									) : (
+										<div className="text-muted-foreground">
+											Initializing...
 										</div>
 									)}
 								</div>

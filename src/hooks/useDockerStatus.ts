@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 
 export type ServiceStatus = "running" | "stopped" | "unknown" | "not-found";
@@ -116,6 +117,89 @@ export function useDockerStatus() {
 		if (!enabled) {
 			// When disabling simulation, immediately check real status
 			checkDockerStatus();
+		}
+	};
+
+	const startN8NWithProgress = async (onProgress?: (message: string) => void, onLogsRefresh?: () => Promise<void>) => {
+		if (simulationMode) {
+			// In simulation mode, just update the state
+			setLoading(true);
+			setTimeout(() => {
+				setStatus((prev) => ({ ...prev, n8n: "running" }));
+				setLoading(false);
+			}, 1000);
+			return;
+		}
+
+		setLoading(true);
+		
+		// Listen for progress events
+		const unlisten = await listen<string>("docker-progress", (event) => {
+			if (onProgress) {
+				onProgress(event.payload);
+			}
+		});
+
+		try {
+			await invoke<string>("start_n8n_streaming");
+
+			// Poll until N8N is actually available  
+			let attempts = 0;
+			const maxAttempts = 60; // Reduced since we have real-time feedback now
+
+			while (attempts < maxAttempts) {
+				try {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					if (n8nStatus.running) {
+						setStatus((prev) => ({ ...prev, n8n: "running" }));
+						break;
+					}
+				} catch (statusError) {
+					console.log("N8N not ready yet, retrying...");
+				}
+
+				// Refresh logs if callback provided
+				if (onLogsRefresh && attempts % 3 === 0) {
+					try {
+						await onLogsRefresh();
+					} catch (logError) {
+						console.log("Could not refresh logs yet");
+					}
+				}
+
+				attempts++;
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+			}
+
+			// Final status check
+			if (attempts >= maxAttempts) {
+				console.warn("N8N start timeout, checking final status");
+				try {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					setStatus((prev) => ({
+						...prev,
+						n8n: n8nStatus.running ? "running" : (n8nStatus.containers_exist || n8nStatus.images_available) ? "stopped" : "unknown",
+					}));
+				} catch (statusError) {
+					setStatus((prev) => ({ ...prev, n8n: "unknown" }));
+				}
+			}
+
+			// Final logs refresh
+			if (onLogsRefresh) {
+				try {
+					await onLogsRefresh();
+				} catch (logError) {
+					console.log("Could not do final logs refresh");
+				}
+			}
+		} catch (error) {
+			console.error("Failed to start N8N:", error);
+			setStatus((prev) => ({ ...prev, n8n: "unknown" }));
+			throw new Error(`Failed to start N8N: ${error}`);
+		} finally {
+			unlisten();
+			setLoading(false);
 		}
 	};
 
@@ -303,6 +387,7 @@ export function useDockerStatus() {
 		simulationMode,
 		checkDockerStatus,
 		startN8N,
+		startN8NWithProgress,
 		stopN8N,
 		getLogs,
 		getDebugPaths,

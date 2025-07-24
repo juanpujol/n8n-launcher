@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{command, Manager};
+use tauri::{command, Manager, Emitter};
 use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::ShellExt;
 use std::sync::Mutex;
@@ -218,6 +218,100 @@ async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
     }
     
     Err(format!("Failed to start N8N. Last error: {}", last_error))
+}
+
+#[command]
+async fn start_n8n_streaming(app: tauri::AppHandle) -> Result<String, String> {
+    let shell = app.shell();
+    
+    // Get the directory containing docker-compose.yaml
+    let compose_dir = get_docker_compose_dir(&app)?;
+    
+    // Try multiple docker-compose locations (including Windows paths)
+    let docker_compose_paths = vec![
+        "docker-compose",
+        "/usr/local/bin/docker-compose",
+        "/opt/homebrew/bin/docker-compose",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+        "C:\\ProgramData\\DockerDesktop\\version-bin\\docker-compose.exe",
+    ];
+    
+    let mut last_error = String::new();
+    
+    for docker_compose_path in docker_compose_paths {
+        let cmd = shell.command(docker_compose_path)
+            .args(["up", "-d"])
+            .current_dir(&compose_dir);
+        
+        // Emit start event
+        let _ = app.emit("docker-progress", "Starting N8N containers...");
+        
+        // Execute command with progress updates
+        let app_clone = app.clone();
+        let progress_task = tokio::spawn(async move {
+            let messages = vec![
+                "Checking Docker images...",
+                "Pulling N8N images (this may take a while)...",
+                "Starting PostgreSQL database...",
+                "Starting Redis cache...", 
+                "Starting N8N editor...",
+                "Starting N8N webhook handler...",
+                "Starting N8N workers...",
+                "Waiting for services to be ready...",
+            ];
+            
+            for (i, message) in messages.iter().enumerate() {
+                let _ = app_clone.emit("docker-progress", message);
+                tokio::time::sleep(std::time::Duration::from_millis(2000 + i as u64 * 1000)).await;
+            }
+        });
+        
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(300), // 5 minutes timeout
+            cmd.output()
+        ).await;
+        
+        // Cancel the progress task
+        progress_task.abort();
+        
+        match result {
+            Ok(Ok(output)) => {
+                if output.status.success() {
+                    let _ = app.emit("docker-progress", "N8N containers started successfully!");
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    
+                    // Emit any actual output we got
+                    if !stdout.trim().is_empty() {
+                        let _ = app.emit("docker-progress", &format!("Output: {}", stdout.trim()));
+                    }
+                    if !stderr.trim().is_empty() {
+                        let _ = app.emit("docker-progress", &format!("Info: {}", stderr.trim()));
+                    }
+                    
+                    return Ok("N8N started successfully with progress updates".to_string());
+                } else {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    let error_msg = format!("Command failed with exit code {}: {}", output.status.code().unwrap_or(-1), error);
+                    let _ = app.emit("docker-progress", &format!("Error: {}", error_msg));
+                    last_error = error_msg;
+                    continue;
+                }
+            }
+            Ok(Err(e)) => {
+                last_error = format!("Command execution error: {}", e);
+                let _ = app.emit("docker-progress", &format!("Error: {}", last_error));
+                continue;
+            }
+            Err(_) => {
+                last_error = "Command timed out after 5 minutes".to_string();
+                let _ = app.emit("docker-progress", &format!("Error: {}", last_error));
+                continue;
+            }
+        }
+    }
+    
+    Err(format!("Failed to start N8N with streaming. Last error: {}", last_error))
 }
 
 #[command]
@@ -490,6 +584,7 @@ fn main() {
             check_docker_status,
             check_n8n_status,
             start_n8n,
+            start_n8n_streaming,
             stop_n8n,
             get_n8n_logs,
             debug_paths
