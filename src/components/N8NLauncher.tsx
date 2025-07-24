@@ -12,10 +12,45 @@ import {
   RefreshCw,
   Square,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
 import { StateController } from "./StateController";
 import { StatusIndicator } from "./StatusIndicator";
+
+// Animated wrapper component
+const AnimatedCard = ({ show, children }: { show: boolean; children: React.ReactNode }) => {
+  const [shouldRender, setShouldRender] = useState(show);
+  const [isVisible, setIsVisible] = useState(show);
+
+  useEffect(() => {
+    if (show) {
+      // Show: render first, then animate in
+      setShouldRender(true);
+      // Small delay to ensure DOM is rendered before starting animation
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    }
+    
+    // Hide: animate out first, then remove from DOM
+    setIsVisible(false);
+    const timer = setTimeout(() => setShouldRender(false), 1000); // Match animation duration
+    return () => clearTimeout(timer);
+  }, [show]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={`transition-all duration-1000 ease-out overflow-hidden ${
+        isVisible
+          ? "max-h-[1000px] opacity-100 transform translate-y-0 mb-6"
+          : "max-h-0 opacity-0 transform -translate-y-4 mb-0"
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
 
 export function N8NLauncher() {
   const {
@@ -313,7 +348,7 @@ export function N8NLauncher() {
             </Card>
 
             {/* Info */}
-            {status.n8n === "running" && (
+            <AnimatedCard show={status.n8n === "running"}>
               <Card className="bg-gradient-card border-border/50 w-full min-w-0">
                 <CardContent className="p-4">
                   <div className="text-center space-y-2">
@@ -339,7 +374,7 @@ export function N8NLauncher() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </AnimatedCard>
 
             {/* Logs Preview */}
             {showLogs && (
@@ -401,7 +436,7 @@ export function N8NLauncher() {
             )}
 
             {/* Start Progress Display */}
-            {showProgress && (
+            <AnimatedCard show={showProgress}>
               <Card className="bg-gradient-card border-border/50 w-full min-w-0">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -437,10 +472,10 @@ export function N8NLauncher() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </AnimatedCard>
 
             {/* Stop Progress Display */}
-            {showStopProgress && (
+            <AnimatedCard show={showStopProgress}>
               <Card className="bg-gradient-card border-border/50 w-full min-w-0">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -476,7 +511,7 @@ export function N8NLauncher() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </AnimatedCard>
 
             {/* Debug Info */}
             {import.meta.env.DEV && showDebugInfo && (

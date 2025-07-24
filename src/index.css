@@ -79,8 +79,8 @@
 	--container-2xl: 1400px;
 
 	/* Animations */
-	--animate-accordion-down: accordion-down 0.2s ease-out;
-	--animate-accordion-up: accordion-up 0.2s ease-out;
+	--animate-accordion-down: accordion-down 1s ease-out;
+	--animate-accordion-up: accordion-up 1s ease-out;
 }
 
 /* Dark mode overrides - matches reference app's .dark class */
