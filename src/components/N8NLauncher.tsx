@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDockerStatus } from "@/hooks/useDockerStatus";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
@@ -168,20 +169,21 @@ export function N8NLauncher() {
 	};
 
 	return (
-		<>
-			{/* Show debug controls only in development */}
-			{import.meta.env.DEV && (
-				<StateController
-					onStateChange={setManualState}
-					onLoadingChange={setManualLoading}
-					onSimulationToggle={toggleSimulation}
-					currentStates={status}
-					loading={loading}
-					simulationEnabled={simulationMode}
-				/>
-			)}
-			<div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
-				<div className="w-full max-w-sm space-y-6">
+		<div className="h-screen bg-gradient-background overflow-hidden">
+			<ScrollArea className="h-full">
+				<div className="flex items-center justify-center p-4 min-h-full">
+					{/* Show debug controls only in development */}
+					{import.meta.env.DEV && (
+						<StateController
+							onStateChange={setManualState}
+							onLoadingChange={setManualLoading}
+							onSimulationToggle={toggleSimulation}
+							currentStates={status}
+							loading={loading}
+							simulationEnabled={simulationMode}
+						/>
+					)}
+					<div className="w-full max-w-sm space-y-6">
 					{/* Header */}
 					<div className="text-center space-y-2">
 						<div className="flex items-center justify-center gap-2 mb-4">
@@ -345,18 +347,22 @@ export function N8NLauncher() {
 										/>
 									</Button>
 								</div>
-								<div className="bg-black/20 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
-									{logsLoading ? (
-										<div className="text-muted-foreground">Loading logs...</div>
-									) : logs ? (
-										<pre className="whitespace-pre-wrap text-muted-foreground">
-											{logs}
-										</pre>
-									) : (
-										<div className="text-muted-foreground">
-											No logs available
+								<div className="bg-black/20 rounded-lg">
+									<ScrollArea className="h-60 p-4">
+										<div className="font-mono text-xs">
+											{logsLoading ? (
+												<div className="text-muted-foreground">Loading logs...</div>
+											) : logs ? (
+												<pre className="whitespace-pre-wrap text-muted-foreground">
+													{logs}
+												</pre>
+											) : (
+												<div className="text-muted-foreground">
+													No logs available
+												</div>
+											)}
 										</div>
-									)}
+									</ScrollArea>
 								</div>
 							</CardContent>
 						</Card>
@@ -372,20 +378,24 @@ export function N8NLauncher() {
 									</h3>
 									<RefreshCw className="h-4 w-4 animate-spin text-primary" />
 								</div>
-								<div className="bg-black/20 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
-									{progressMessages.length > 0 ? (
-										<div className="space-y-1">
-											{progressMessages.map((message, index) => (
-												<div key={index} className="text-muted-foreground">
-													{message}
+								<div className="bg-black/20 rounded-lg">
+									<ScrollArea className="h-60 p-4">
+										<div className="font-mono text-xs">
+											{progressMessages.length > 0 ? (
+												<div className="space-y-1">
+													{progressMessages.map((message, index) => (
+														<div key={index} className="text-muted-foreground">
+															{message}
+														</div>
+													))}
 												</div>
-											))}
+											) : (
+												<div className="text-muted-foreground">
+													Initializing...
+												</div>
+											)}
 										</div>
-									) : (
-										<div className="text-muted-foreground">
-											Initializing...
-										</div>
-									)}
+									</ScrollArea>
 								</div>
 							</CardContent>
 						</Card>
@@ -400,22 +410,27 @@ export function N8NLauncher() {
 										Debug Information
 									</h3>
 								</div>
-								<div className="bg-black/20 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
-									{debugInfo ? (
-										<pre className="whitespace-pre-wrap text-muted-foreground">
-											{debugInfo}
-										</pre>
-									) : (
-										<div className="text-muted-foreground">
-											No debug info available
+								<div className="bg-black/20 rounded-lg">
+									<ScrollArea className="h-60 p-4">
+										<div className="font-mono text-xs">
+											{debugInfo ? (
+												<pre className="whitespace-pre-wrap text-muted-foreground">
+													{debugInfo}
+												</pre>
+											) : (
+												<div className="text-muted-foreground">
+													No debug info available
+												</div>
+											)}
 										</div>
-									)}
+									</ScrollArea>
 								</div>
 							</CardContent>
 						</Card>
 					)}
+					</div>
 				</div>
-			</div>
-		</>
+			</ScrollArea>
+		</div>
 	);
 }
