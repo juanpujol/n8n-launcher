@@ -39,7 +39,7 @@
 			"icons/icon.ico"
 		],
 		"longDescription": "",
-		"resources": [],
+		"resources": ["docker-compose.yaml"],
 		"shortDescription": "",
 		"targets": "all",
 		"createUpdaterArtifacts": false,
