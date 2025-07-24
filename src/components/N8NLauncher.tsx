@@ -9,6 +9,7 @@ import {
 	Play,
 	RefreshCw,
 	Square,
+	Bug,
 } from "lucide-react";
 import { useState } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
@@ -24,6 +25,7 @@ export function N8NLauncher() {
 		startN8N,
 		stopN8N,
 		getLogs,
+		getDebugPaths,
 		setManualState,
 		setManualLoading,
 		toggleSimulation,
@@ -32,6 +34,8 @@ export function N8NLauncher() {
 	const [logs, setLogs] = useState<string>("");
 	const [logsLoading, setLogsLoading] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string>("");
+	const [showDebugInfo, setShowDebugInfo] = useState(false);
+	const [debugInfo, setDebugInfo] = useState<string>("");
 
 	const refreshLogs = async () => {
 		try {
@@ -84,6 +88,20 @@ export function N8NLauncher() {
 			}
 		}
 		setShowLogs(!showLogs);
+	};
+
+	const handleDebugPaths = async () => {
+		if (!showDebugInfo) {
+			try {
+				const paths = await getDebugPaths();
+				setDebugInfo(paths);
+			} catch (error) {
+				console.error("Failed to get debug paths:", error);
+				const errorMsg = error instanceof Error ? error.message : "Failed to get debug info";
+				setDebugInfo(errorMsg);
+			}
+		}
+		setShowDebugInfo(!showDebugInfo);
 	};
 
 	const getMainActionButton = () => {
@@ -234,6 +252,16 @@ export function N8NLauncher() {
 											? "Hide Logs"
 											: "View Logs"}
 								</Button>
+
+								<Button
+									variant="outline"
+									size="lg"
+									className="w-full"
+									onClick={handleDebugPaths}
+								>
+									<Bug className="mr-2 h-5 w-5" />
+									{showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
+								</Button>
 							</div>
 						</CardContent>
 					</Card>
@@ -308,6 +336,30 @@ export function N8NLauncher() {
 									) : (
 										<div className="text-muted-foreground">
 											No logs available
+										</div>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					)}
+
+					{/* Debug Info */}
+					{showDebugInfo && (
+						<Card className="bg-gradient-card border-border/50">
+							<CardContent className="p-4">
+								<div className="flex items-center justify-between mb-3">
+									<h3 className="text-sm font-semibold text-foreground">
+										Debug Information
+									</h3>
+								</div>
+								<div className="bg-black/20 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
+									{debugInfo ? (
+										<pre className="whitespace-pre-wrap text-muted-foreground">
+											{debugInfo}
+										</pre>
+									) : (
+										<div className="text-muted-foreground">
+											No debug info available
 										</div>
 									)}
 								</div>
