@@ -16,6 +16,14 @@ struct DockerStatus {
     version: Option<String>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct N8NStatus {
+    running: bool,
+    containers_exist: bool,
+    images_available: bool,
+    error_message: Option<String>,
+}
+
 #[command]
 async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, String> {
     let shell = app.shell();
@@ -86,56 +94,172 @@ async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, Stri
 async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
     
-    // Try multiple docker-compose locations
+    // Try multiple docker-compose locations (including Windows paths)
     let docker_compose_paths = vec![
         "docker-compose",
         "/usr/local/bin/docker-compose",
         "/opt/homebrew/bin/docker-compose",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+        "C:\\ProgramData\\DockerDesktop\\version-bin\\docker-compose.exe",
     ];
+    
+    let mut last_error = String::new();
     
     for docker_compose_path in docker_compose_paths {
         let cmd = shell.command(docker_compose_path).args(["up", "-d"]);
         
-        match cmd.output().await {
-            Ok(output) => {
+        // Add timeout to prevent hanging
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(300), // 5 minutes timeout for image downloads
+            cmd.output()
+        ).await;
+        
+        match result {
+            Ok(Ok(output)) => {
                 if output.status.success() {
-                    return Ok("N8N started successfully".to_string());
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Ok(format!("N8N started successfully. Output: {}\nErrors: {}", stdout, stderr));
                 } else {
-                    // Continue to next path on error
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    last_error = format!("Command failed with exit code {}: {}", output.status.code().unwrap_or(-1), error);
                     continue;
                 }
             }
+            Ok(Err(e)) => {
+                last_error = format!("Command execution error: {}", e);
+                continue;
+            }
             Err(_) => {
-                // Continue to next path on error
+                last_error = "Command timed out after 5 minutes".to_string();
                 continue;
             }
         }
     }
     
-    Err("Failed to start N8N: docker-compose not found in any expected location".to_string())
+    Err(format!("Failed to start N8N. Last error: {}", last_error))
 }
 
 #[command]
 async fn stop_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
-    let cmd = shell.command("docker-compose").args(["down"]);
     
-    match cmd.output().await {
-        Ok(output) => {
-            if output.status.success() {
-                Ok("N8N stopped successfully".to_string())
-            } else {
-                let error = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Failed to stop N8N: {}", error))
+    // Try multiple docker-compose locations (including Windows paths)
+    let docker_compose_paths = vec![
+        "docker-compose",
+        "/usr/local/bin/docker-compose",
+        "/opt/homebrew/bin/docker-compose",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+        "C:\\ProgramData\\DockerDesktop\\version-bin\\docker-compose.exe",
+    ];
+    
+    let mut last_error = String::new();
+    
+    for docker_compose_path in docker_compose_paths {
+        let cmd = shell.command(docker_compose_path).args(["down"]);
+        
+        // Add timeout
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(60), // 1 minute timeout for stop
+            cmd.output()
+        ).await;
+        
+        match result {
+            Ok(Ok(output)) => {
+                if output.status.success() {
+                    return Ok("N8N stopped successfully".to_string());
+                } else {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    last_error = format!("Command failed: {}", error);
+                    continue;
+                }
+            }
+            Ok(Err(e)) => {
+                last_error = format!("Command execution error: {}", e);
+                continue;
+            }
+            Err(_) => {
+                last_error = "Command timed out after 1 minute".to_string();
+                continue;
             }
         }
-        Err(e) => Err(format!("Failed to stop N8N: {}", e)),
     }
+    
+    Err(format!("Failed to stop N8N. Last error: {}", last_error))
 }
 
 #[command]
-async fn check_n8n_status(_app: tauri::AppHandle) -> Result<bool, String> {
-    // Get N8N port from environment or use default
+async fn check_n8n_status(app: tauri::AppHandle) -> Result<N8NStatus, String> {
+    let shell = app.shell();
+    let docker_paths = vec![
+        "docker",
+        "/usr/local/bin/docker",
+        "/opt/homebrew/bin/docker",
+        "/Applications/Docker.app/Contents/Resources/bin/docker",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+    ];
+    
+    let mut docker_path_found = None;
+    
+    // Find working docker path
+    for docker_path in &docker_paths {
+        let cmd = shell.command(docker_path).args(["--version"]);
+        if let Ok(Ok(output)) = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            cmd.output()
+        ).await {
+            if output.status.success() {
+                docker_path_found = Some(*docker_path);
+                break;
+            }
+        }
+    }
+    
+    let docker_path = docker_path_found.ok_or("Docker not found")?;
+    
+    // Check if N8N images are available
+    let images_cmd = shell.command(docker_path).args(["images", "n8nio/n8n", "--format", "{{.Repository}}"]);
+    let images_available = if let Ok(Ok(output)) = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        images_cmd.output()
+    ).await {
+        output.status.success() && !String::from_utf8_lossy(&output.stdout).trim().is_empty()
+    } else {
+        false
+    };
+    
+    // Check if containers are running
+    let ps_cmd = shell.command(docker_path).args(["ps", "--filter", "name=n8n", "--format", "{{.Names}}"]);
+    let containers_running = if let Ok(Ok(output)) = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        ps_cmd.output()
+    ).await {
+        output.status.success() && String::from_utf8_lossy(&output.stdout).contains("n8n")
+    } else {
+        false
+    };
+    
+    // Check if containers exist (even if stopped)
+    let ps_all_cmd = shell.command(docker_path).args(["ps", "-a", "--filter", "name=n8n", "--format", "{{.Names}}"]);
+    let containers_exist = if let Ok(Ok(output)) = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        ps_all_cmd.output()
+    ).await {
+        output.status.success() && String::from_utf8_lossy(&output.stdout).contains("n8n")
+    } else {
+        false
+    };
+    
+    if !containers_running {
+        return Ok(N8NStatus {
+            running: false,
+            containers_exist,
+            images_available,
+            error_message: None,
+        });
+    }
+    
+    // If containers are running, check HTTP endpoints
     let port = std::env::var("N8N_PORT").unwrap_or_else(|_| "5678".to_string());
     let base_url = format!("http://localhost:{}", port);
     
@@ -144,44 +268,83 @@ async fn check_n8n_status(_app: tauri::AppHandle) -> Result<bool, String> {
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
-    // Try multiple endpoints to check if N8N is responding
     let endpoints = vec![
-        format!("{}/healthz", base_url),    // Health check endpoint
-        format!("{}/api/v1/health", base_url), // Alternative health endpoint
-        base_url.clone(),                   // Root endpoint
+        format!("{}/healthz", base_url),
+        format!("{}/api/v1/health", base_url),
+        base_url.clone(),
     ];
     
     for endpoint in endpoints {
         match client.get(&endpoint).send().await {
             Ok(response) => {
                 if response.status().is_success() || response.status().as_u16() == 401 {
-                    // 401 also means N8N is running (just needs auth)
-                    return Ok(true);
+                    return Ok(N8NStatus {
+                        running: true,
+                        containers_exist: true,
+                        images_available: true,
+                        error_message: None,
+                    });
                 }
             }
             Err(_) => continue,
         }
     }
     
-    Ok(false)
+    // Containers running but N8N not responding
+    Ok(N8NStatus {
+        running: false,
+        containers_exist: true,
+        images_available: true,
+        error_message: Some("Containers running but N8N not responding".to_string()),
+    })
 }
 
 #[command]
 async fn get_n8n_logs(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
-    let cmd = shell.command("docker-compose").args(["logs", "--tail=100"]);
     
-    match cmd.output().await {
-        Ok(output) => {
-            if output.status.success() {
-                Ok(String::from_utf8_lossy(&output.stdout).to_string())
-            } else {
-                let error = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Failed to get logs: {}", error))
+    // Try multiple docker-compose locations (including Windows paths)
+    let docker_compose_paths = vec![
+        "docker-compose",
+        "/usr/local/bin/docker-compose",
+        "/opt/homebrew/bin/docker-compose",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+        "C:\\ProgramData\\DockerDesktop\\version-bin\\docker-compose.exe",
+    ];
+    
+    let mut last_error = String::new();
+    
+    for docker_compose_path in docker_compose_paths {
+        let cmd = shell.command(docker_compose_path).args(["logs", "--tail=100"]);
+        
+        // Add timeout
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(10), // 10 seconds timeout for logs
+            cmd.output()
+        ).await;
+        
+        match result {
+            Ok(Ok(output)) => {
+                if output.status.success() {
+                    return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+                } else {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    last_error = format!("Command failed: {}", error);
+                    continue;
+                }
+            }
+            Ok(Err(e)) => {
+                last_error = format!("Command execution error: {}", e);
+                continue;
+            }
+            Err(_) => {
+                last_error = "Command timed out after 10 seconds".to_string();
+                continue;
             }
         }
-        Err(e) => Err(format!("Failed to get logs: {}", e)),
     }
+    
+    Err(format!("Failed to get logs. Last error: {}", last_error))
 }
 
 fn main() {
