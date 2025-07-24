@@ -6,6 +6,8 @@
 		"shell:allow-execute",
 		"shell:allow-spawn",
 		"opener:default",
+		"core:event:allow-listen",
+		"core:event:allow-emit",
 		{
 			"identifier": "shell:allow-execute",
 			"allow": [
