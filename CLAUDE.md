@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PocketN8N is a desktop application built with Tauri (Rust backend) and React (TypeScript frontend) that provides a user-friendly interface for managing N8N automation workflows via Docker. The app handles Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack including PostgreSQL, Redis, and N8N services.
+N8N Launcher is a desktop application built with Tauri (Rust backend) and React (TypeScript frontend) that provides a user-friendly interface for managing N8N automation workflows via Docker. The app handles Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack including PostgreSQL, Redis, and N8N services.
 
 ## Development Commands
 

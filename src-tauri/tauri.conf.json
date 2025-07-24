@@ -1,8 +1,8 @@
 {
 	"$schema": "../node_modules/@tauri-apps/cli/schema.json",
-	"productName": "PocketN8N",
+	"productName": "N8N Launcher",
 	"version": "0.1.0",
-	"identifier": "com.pocketn8n.app",
+	"identifier": "com.n8nlauncher.app",
 	"build": {
 		"beforeBuildCommand": "bun run build",
 		"beforeDevCommand": "bun run dev",
@@ -15,7 +15,7 @@
 				"fullscreen": false,
 				"height": 680,
 				"resizable": true,
-				"title": "PocketN8N",
+				"title": "N8N Launcher",
 				"width": 390,
 				"minWidth": 350,
 				"minHeight": 600
