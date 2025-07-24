@@ -4,6 +4,17 @@ A cross-platform desktop application to easily start your local N8N instance. Bu
 
 ![N8N Launcher Screenshot](app-print.jpg)
 
+## 📥 Download
+
+Get the latest version of N8N Launcher for your platform:
+
+| Platform | Download |
+|----------|----------|
+| 🍎 **macOS** | [Download for macOS](https://github.com/juanpujol/n8n-launcher/releases/download/v0.1.3/n8n-launcher_0.1.3_aarch64.dmg) |
+| 🪟 **Windows** | [Download for Windows](https://github.com/juanpujol/n8n-launcher/releases/download/v0.1.3/n8n-launcher_0.1.3_x64_en-US.msi) |
+
+> 💡 **Tip**: For the latest releases and all available formats, visit our [Releases page](https://github.com/juanpujol/n8n-launcher/releases).
+
 ## Features
 
 - 🐳 **Docker Management**: Start/stop N8N stack with PostgreSQL, Redis, and N8N services
