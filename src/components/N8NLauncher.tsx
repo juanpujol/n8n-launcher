@@ -11,13 +11,19 @@ import {
   RefreshCw,
   Square,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
 import { StateController } from "./StateController";
 import { StatusIndicator } from "./StatusIndicator";
 
 // Animated wrapper component
-const AnimatedCard = ({ show, children }: { show: boolean; children: React.ReactNode }) => {
+const AnimatedCard = ({
+  show,
+  children,
+}: {
+  show: boolean;
+  children: React.ReactNode;
+}) => {
   const [shouldRender, setShouldRender] = useState(show);
   const [isVisible, setIsVisible] = useState(show);
 
@@ -29,7 +35,7 @@ const AnimatedCard = ({ show, children }: { show: boolean; children: React.React
       const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     }
-    
+
     // Hide: animate out first, then remove from DOM
     setIsVisible(false);
     const timer = setTimeout(() => setShouldRender(false), 1000); // Match animation duration
@@ -163,7 +169,6 @@ export function N8NLauncher() {
     setShowLogs(!showLogs);
   };
 
-
   const getMainActionButton = () => {
     if (status.docker !== "running") {
       return (
@@ -292,28 +297,25 @@ export function N8NLauncher() {
             {/* Controls */}
             <Card className="bg-gradient-card border-border/50 w-full min-w-0">
               <CardContent className="p-6 space-y-4">
-                <h2 className="text-lg font-semibold text-foreground mb-4">
-                  Controls
-                </h2>
-
                 <div className="space-y-3">
                   {getMainActionButton()}
 
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="w-full"
-                    onClick={handleViewLogs}
-                    disabled={logsLoading}
-                  >
-                    <FileText className="mr-2 h-5 w-5" />
-                    {logsLoading
-                      ? "Loading..."
-                      : showLogs
-                      ? "Hide Logs"
-                      : "View Logs"}
-                  </Button>
-
+                  {import.meta.env.DEV && (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full"
+                      onClick={handleViewLogs}
+                      disabled={logsLoading}
+                    >
+                      <FileText className="mr-2 h-5 w-5" />
+                      {logsLoading
+                        ? "Loading..."
+                        : showLogs
+                        ? "Hide Logs"
+                        : "View Logs"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -348,7 +350,7 @@ export function N8NLauncher() {
             </AnimatedCard>
 
             {/* Logs Preview */}
-            {showLogs && (
+            {import.meta.env.DEV && showLogs && (
               <Card className="bg-gradient-card border-border/50 w-full min-w-0">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -483,7 +485,6 @@ export function N8NLauncher() {
                 </CardContent>
               </Card>
             </AnimatedCard>
-
           </div>
         </div>
       </ScrollArea>
