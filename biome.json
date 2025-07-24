@@ -1,11 +1,6 @@
 {
 	"files": {
-		"ignore": [
-			"trigger/.trigger",
-			".wrangler",
-			"node_modules",
-			"worker-configuration.d.ts"
-		]
+		"ignore": ["node_modules", "src-tauri", "dist"]
 	},
 	"organizeImports": {
 		"enabled": true
