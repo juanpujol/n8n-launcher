@@ -135,12 +135,18 @@ jobs:
       - name: Commit version changes
         run: |
           git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
-          git commit -m "chore: bump version to v${{ steps.new_version.outputs.version }}"
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: bump version to v${{ steps.new_version.outputs.version }}"
+          else
+            echo "No version changes to commit"
+          fi
           
       - name: Create and push tag
         run: |
           git tag -a "v${{ steps.new_version.outputs.version }}" -m "Release v${{ steps.new_version.outputs.version }}"
-          git push origin main
+          # Always try to push main (will be no-op if no changes)
+          git push origin main || echo "No changes to push to main"
           git push origin "v${{ steps.new_version.outputs.version }}"
           
       - name: Prepare release assets
