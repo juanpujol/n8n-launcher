@@ -278,6 +278,114 @@ export function useDockerStatus() {
 		}
 	};
 
+	const stopN8NWithProgress = async (onProgress?: (message: string) => void, onLogsRefresh?: () => Promise<void>) => {
+		if (simulationMode) {
+			// In simulation mode, just update the state
+			setLoading(true);
+			if (onProgress) {
+				onProgress("Simulation mode: Stopping N8N...");
+				setTimeout(() => onProgress("Simulation mode: N8N stopped"), 400);
+			}
+			setTimeout(() => {
+				setStatus((prev) => ({ ...prev, n8n: "stopped" }));
+				setLoading(false);
+			}, 800);
+			return;
+		}
+
+		setLoading(true);
+		
+		try {
+			if (onProgress) {
+				onProgress("Stopping N8N containers...");
+			}
+
+			await invoke<string>("stop_n8n");
+
+			// Poll until N8N is actually stopped
+			let attempts = 0;
+			const maxAttempts = 15; // 15 seconds max for shutdown
+
+			while (attempts < maxAttempts) {
+				if (onProgress) {
+					onProgress(`Waiting for containers to stop... (${attempts + 1}/${maxAttempts})`);
+				}
+
+				try {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					if (!n8nStatus.running) {
+						if (onProgress) {
+							onProgress("N8N stopped successfully");
+						}
+						setStatus((prev) => ({ ...prev, n8n: "stopped" }));
+						break;
+					}
+				} catch (statusError) {
+					// If we can't check status, assume it's stopped
+					if (onProgress) {
+						onProgress("N8N stopped (status check unavailable)");
+					}
+					setStatus((prev) => ({ ...prev, n8n: "stopped" }));
+					break;
+				}
+
+				// Refresh logs every few attempts if callback provided
+				if (onLogsRefresh && attempts % 2 === 0) {
+					try {
+						await onLogsRefresh();
+					} catch (logError) {
+						console.log("Could not refresh logs during stop");
+					}
+				}
+
+				attempts++;
+				await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
+			}
+
+			// Final status check
+			if (attempts >= maxAttempts) {
+				if (onProgress) {
+					onProgress("Stop timeout reached, checking final status...");
+				}
+				console.warn("N8N stop timeout, checking final status");
+				try {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					const finalStatus = n8nStatus.running ? "running" : "stopped";
+					if (onProgress) {
+						onProgress(finalStatus === "running" ? "Warning: N8N may still be running" : "N8N stopped");
+					}
+					setStatus((prev) => ({
+						...prev,
+						n8n: finalStatus,
+					}));
+				} catch (statusError) {
+					if (onProgress) {
+						onProgress("Assuming N8N is stopped");
+					}
+					setStatus((prev) => ({ ...prev, n8n: "stopped" }));
+				}
+			}
+
+			// Final logs refresh
+			if (onLogsRefresh) {
+				try {
+					await onLogsRefresh();
+				} catch (logError) {
+					console.log("Could not do final logs refresh after stop");
+				}
+			}
+		} catch (error) {
+			console.error("Failed to stop N8N:", error);
+			if (onProgress) {
+				onProgress(`Error stopping N8N: ${error}`);
+			}
+			setStatus((prev) => ({ ...prev, n8n: "unknown" }));
+			throw new Error(`Failed to stop N8N: ${error}`);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	const stopN8N = async (onLogsRefresh?: () => Promise<void>) => {
 		if (simulationMode) {
 			// In simulation mode, just update the state
@@ -389,6 +497,7 @@ export function useDockerStatus() {
 		startN8N,
 		startN8NWithProgress,
 		stopN8N,
+		stopN8NWithProgress,
 		getLogs,
 		getDebugPaths,
 		setManualState,

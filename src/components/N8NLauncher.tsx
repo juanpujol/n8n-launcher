@@ -4,13 +4,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDockerStatus } from "@/hooks/useDockerStatus";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-	Activity,
-	Container,
-	FileText,
-	Play,
-	RefreshCw,
-	Square,
-	Bug,
+  Activity,
+  Bug,
+  Container,
+  FileText,
+  Play,
+  RefreshCw,
+  Square,
 } from "lucide-react";
 import { useState } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
@@ -18,421 +18,496 @@ import { StateController } from "./StateController";
 import { StatusIndicator } from "./StatusIndicator";
 
 export function N8NLauncher() {
-	const {
-		status,
-		loading,
-		simulationMode,
-		checkDockerStatus,
-		startN8N,
-		startN8NWithProgress,
-		stopN8N,
-		getLogs,
-		getDebugPaths,
-		setManualState,
-		setManualLoading,
-		toggleSimulation,
-	} = useDockerStatus();
-	const [showLogs, setShowLogs] = useState(false);
-	const [logs, setLogs] = useState<string>("");
-	const [logsLoading, setLogsLoading] = useState(false);
-	const [errorMessage, setErrorMessage] = useState<string>("");
-	const [showDebugInfo, setShowDebugInfo] = useState(false);
-	const [debugInfo, setDebugInfo] = useState<string>("");
-	const [progressMessages, setProgressMessages] = useState<string[]>([]);
-	const [showProgress, setShowProgress] = useState(false);
+  const {
+    status,
+    loading,
+    simulationMode,
+    checkDockerStatus,
+    startN8NWithProgress,
+    stopN8NWithProgress,
+    getLogs,
+    getDebugPaths,
+    setManualState,
+    setManualLoading,
+    toggleSimulation,
+  } = useDockerStatus();
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<string>("");
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
+  const [progressMessages, setProgressMessages] = useState<string[]>([]);
+  const [showProgress, setShowProgress] = useState(false);
+  const [stopProgressMessages, setStopProgressMessages] = useState<string[]>(
+    []
+  );
+  const [showStopProgress, setShowStopProgress] = useState(false);
 
-	const refreshLogs = async () => {
-		try {
-			const dockerLogs = await getLogs();
-			setLogs(dockerLogs);
-		} catch (error) {
-			console.log("Could not refresh logs:", error);
-		}
-	};
+  const refreshLogs = async () => {
+    try {
+      const dockerLogs = await getLogs();
+      setLogs(dockerLogs);
+    } catch (error) {
+      console.log("Could not refresh logs:", error);
+    }
+  };
 
-	const handleStartN8N = async () => {
-		if (status.docker !== "running") {
-			return;
-		}
+  const handleStartN8N = async () => {
+    if (status.docker !== "running") {
+      return;
+    }
 
-		setErrorMessage(""); // Clear any previous errors
-		setProgressMessages([]);
-		setShowProgress(true);
-		
-		try {
-			// Progress callback to collect messages
-			const onProgress = (message: string) => {
-				setProgressMessages(prev => [...prev, message]);
-			};
-			
-			// If logs are visible, pass refresh callback
-			const logsRefreshCallback = showLogs ? refreshLogs : undefined;
-			
-			await startN8NWithProgress(onProgress, logsRefreshCallback);
-			
-			// Hide progress after successful completion
-			setTimeout(() => {
-				setShowProgress(false);
-				setProgressMessages([]);
-			}, 3000);
-		} catch (error) {
-			console.error("Failed to start N8N:", error);
-			setErrorMessage(error instanceof Error ? error.message : String(error));
-			setShowProgress(false);
-		}
-	};
+    setErrorMessage(""); // Clear any previous errors
+    setProgressMessages([]);
+    setShowProgress(true);
 
-	const handleStopN8N = async () => {
-		setErrorMessage(""); // Clear any previous errors
-		try {
-			// If logs are visible, pass refresh callback
-			const logsRefreshCallback = showLogs ? refreshLogs : undefined;
-			await stopN8N(logsRefreshCallback);
-		} catch (error) {
-			console.error("Failed to stop N8N:", error);
-			setErrorMessage(error instanceof Error ? error.message : String(error));
-		}
-	};
+    try {
+      // Progress callback to collect messages
+      const onProgress = (message: string) => {
+        setProgressMessages((prev) => [...prev, message]);
+      };
 
-	const handleViewLogs = async () => {
-		if (!showLogs) {
-			setLogsLoading(true);
-			try {
-				await refreshLogs();
-			} catch (error) {
-				console.error("Failed to get logs:", error);
-				const errorMsg = error instanceof Error ? error.message : "Failed to load logs. Make sure Docker Compose is running.";
-				setLogs(errorMsg);
-			} finally {
-				setLogsLoading(false);
-			}
-		}
-		setShowLogs(!showLogs);
-	};
+      // If logs are visible, pass refresh callback
+      const logsRefreshCallback = showLogs ? refreshLogs : undefined;
 
-	const handleDebugPaths = async () => {
-		if (!showDebugInfo) {
-			try {
-				const paths = await getDebugPaths();
-				setDebugInfo(paths);
-			} catch (error) {
-				console.error("Failed to get debug paths:", error);
-				const errorMsg = error instanceof Error ? error.message : "Failed to get debug info";
-				setDebugInfo(errorMsg);
-			}
-		}
-		setShowDebugInfo(!showDebugInfo);
-	};
+      await startN8NWithProgress(onProgress, logsRefreshCallback);
 
-	const getMainActionButton = () => {
-		if (status.docker !== "running") {
-			return (
-				<Button
-					variant="outline"
-					size="lg"
-					className="w-full opacity-50 cursor-not-allowed"
-					disabled
-				>
-					<Container className="mr-2 h-5 w-5" />
-					Docker Required
-				</Button>
-			);
-		}
+      // Hide progress after successful completion
+      setTimeout(() => {
+        setShowProgress(false);
+        setProgressMessages([]);
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to start N8N:", error);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setShowProgress(false);
+    }
+  };
 
-		if (status.n8n === "running") {
-			return (
-				<Button
-					variant="destructive"
-					size="lg"
-					className="w-full"
-					onClick={handleStopN8N}
-					disabled={loading}
-				>
-					<Square className="mr-2 h-5 w-5" />
-					Stop N8N
-				</Button>
-			);
-		}
+  const handleStopN8N = async () => {
+    setErrorMessage(""); // Clear any previous errors
+    setStopProgressMessages([]);
+    setShowStopProgress(true);
 
-		return (
-			<Button
-				variant="gradient"
-				size="lg"
-				className="w-full"
-				onClick={handleStartN8N}
-				disabled={loading}
-			>
-				<Play className="mr-2 h-5 w-5" />
-				Start N8N
-			</Button>
-		);
-	};
+    try {
+      // Progress callback to collect stop messages
+      const onProgress = (message: string) => {
+        setStopProgressMessages((prev) => [...prev, message]);
+      };
 
-	return (
-		<div className="h-screen bg-gradient-background overflow-hidden">
-			<ScrollArea className="h-full">
-				<div className="flex items-center justify-center p-4 min-h-full">
-					{/* Show debug controls only in development */}
-					{import.meta.env.DEV && (
-						<StateController
-							onStateChange={setManualState}
-							onLoadingChange={setManualLoading}
-							onSimulationToggle={toggleSimulation}
-							currentStates={status}
-							loading={loading}
-							simulationEnabled={simulationMode}
-						/>
-					)}
-					<div className="w-full max-w-sm space-y-6">
-					{/* Header */}
-					<div className="text-center space-y-2">
-						<div className="flex items-center justify-center gap-2 mb-4">
-							<Activity className="h-8 w-8 text-muted-foreground" />
-							<h1 className="text-2xl font-bold text-muted-foreground">
-								N8N Launcher
-							</h1>
-						</div>
-					</div>
+      // If logs are visible, pass refresh callback
+      const logsRefreshCallback = showLogs ? refreshLogs : undefined;
 
-					{/* Docker Installation Guide or System Status */}
-					{status.docker === "not-found" ? (
-						<DockerInstallGuide />
-					) : loading && status.docker === "unknown" ? (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-6 space-y-3">
-								<div className="flex items-center justify-center">
-									<RefreshCw className="h-6 w-6 animate-spin text-primary mr-2" />
-									<span className="text-muted-foreground">
-										Checking Docker status...
-									</span>
-								</div>
-							</CardContent>
-						</Card>
-					) : (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-6 space-y-3">
-								<div className="flex items-center justify-between mb-4">
-									<h2 className="text-lg font-semibold text-foreground">
-										System Status
-									</h2>
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => checkDockerStatus()}
-										disabled={loading}
-										className="h-8 w-8"
-									>
-										<RefreshCw
-											className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-										/>
-									</Button>
-								</div>
+      await stopN8NWithProgress(onProgress, logsRefreshCallback);
 
-								<StatusIndicator
-									status={status.docker}
-									label="Docker"
-									className="bg-card/20"
-								/>
-								<StatusIndicator
-									status={status.n8n}
-									label="N8N Service"
-									className="bg-card/20"
-								/>
-								
-								{/* Show error message if present */}
-								{errorMessage && (
-									<div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-										<p className="text-sm text-red-400">{errorMessage}</p>
-									</div>
-								)}
-							</CardContent>
-						</Card>
-					)}
+      // Hide progress after successful completion
+      setTimeout(() => {
+        setShowStopProgress(false);
+        setStopProgressMessages([]);
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to stop N8N:", error);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setShowStopProgress(false);
+    }
+  };
 
-					{/* Controls */}
-					<Card className="bg-gradient-card border-border/50">
-						<CardContent className="p-6 space-y-4">
-							<h2 className="text-lg font-semibold text-foreground mb-4">
-								Controls
-							</h2>
+  const handleViewLogs = async () => {
+    if (!showLogs) {
+      setLogsLoading(true);
+      try {
+        await refreshLogs();
+      } catch (error) {
+        console.error("Failed to get logs:", error);
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : "Failed to load logs. Make sure Docker Compose is running.";
+        setLogs(errorMsg);
+      } finally {
+        setLogsLoading(false);
+      }
+    }
+    setShowLogs(!showLogs);
+  };
 
-							<div className="space-y-3">
-								{getMainActionButton()}
+  const handleDebugPaths = async () => {
+    if (!showDebugInfo) {
+      try {
+        const paths = await getDebugPaths();
+        setDebugInfo(paths);
+      } catch (error) {
+        console.error("Failed to get debug paths:", error);
+        const errorMsg =
+          error instanceof Error ? error.message : "Failed to get debug info";
+        setDebugInfo(errorMsg);
+      }
+    }
+    setShowDebugInfo(!showDebugInfo);
+  };
 
-								<Button
-									variant="secondary"
-									size="lg"
-									className="w-full"
-									onClick={handleViewLogs}
-									disabled={logsLoading}
-								>
-									<FileText className="mr-2 h-5 w-5" />
-									{logsLoading
-										? "Loading..."
-										: showLogs
-											? "Hide Logs"
-											: "View Logs"}
-								</Button>
+  const getMainActionButton = () => {
+    if (status.docker !== "running") {
+      return (
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full opacity-50 cursor-not-allowed"
+          disabled
+        >
+          <Container className="mr-2 h-5 w-5" />
+          Docker Required
+        </Button>
+      );
+    }
 
-								{import.meta.env.DEV && (
-									<Button
-										variant="outline"
-										size="lg"
-										className="w-full"
-										onClick={handleDebugPaths}
-									>
-										<Bug className="mr-2 h-5 w-5" />
-										{showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
-									</Button>
-								)}
-							</div>
-						</CardContent>
-					</Card>
+    if (status.n8n === "running") {
+      return (
+        <Button
+          variant="destructive"
+          size="lg"
+          className="w-full"
+          onClick={handleStopN8N}
+          disabled={loading}
+        >
+          <Square className="mr-2 h-5 w-5" />
+          Stop N8N
+        </Button>
+      );
+    }
 
-					{/* Info */}
-					{status.n8n === "running" && (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-4">
-								<div className="text-center space-y-2">
-									<p className="text-sm text-muted-foreground">
-										N8N is running on
-									</p>
-									<p className="text-primary font-mono text-lg">
-										localhost:5678
-									</p>
-									<Button
-										variant="link"
-										className="text-sm h-auto p-0"
-										onClick={async () => {
-											try {
-												await openUrl("http://localhost:5678");
-											} catch (error) {
-												console.error("Failed to open N8N interface:", error);
-											}
-										}}
-									>
-										Open N8N Interface →
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-					)}
+    return (
+      <Button
+        variant="gradient"
+        size="lg"
+        className="w-full"
+        onClick={handleStartN8N}
+        disabled={loading}
+      >
+        <Play className="mr-2 h-5 w-5" />
+        Start N8N
+      </Button>
+    );
+  };
 
-					{/* Logs Preview */}
-					{showLogs && (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between mb-3">
-									<h3 className="text-sm font-semibold text-foreground">
-										Docker Logs
-									</h3>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={async () => {
-											setLogsLoading(true);
-											try {
-												await refreshLogs();
-											} catch (error) {
-												console.error("Failed to refresh logs:", error);
-												const errorMsg = error instanceof Error ? error.message : "Failed to load logs. Make sure Docker Compose is running.";
-												setLogs(errorMsg);
-											} finally {
-												setLogsLoading(false);
-											}
-										}}
-										disabled={logsLoading}
-										className="h-7 px-2 text-xs"
-									>
-										<RefreshCw
-											className={`h-3 w-3 ${logsLoading ? "animate-spin" : ""}`}
-										/>
-									</Button>
-								</div>
-								<div className="bg-black/20 rounded-lg">
-									<ScrollArea className="h-60 p-4">
-										<div className="font-mono text-xs">
-											{logsLoading ? (
-												<div className="text-muted-foreground">Loading logs...</div>
-											) : logs ? (
-												<pre className="whitespace-pre-wrap text-muted-foreground">
-													{logs}
-												</pre>
-											) : (
-												<div className="text-muted-foreground">
-													No logs available
-												</div>
-											)}
-										</div>
-									</ScrollArea>
-								</div>
-							</CardContent>
-						</Card>
-					)}
+  return (
+    <div className="h-screen bg-gradient-background overflow-hidden">
+      <ScrollArea className="h-full">
+        <div className="flex items-center justify-center p-4 min-h-full">
+          {/* Show debug controls only in development */}
+          {import.meta.env.DEV && (
+            <StateController
+              onStateChange={setManualState}
+              onLoadingChange={setManualLoading}
+              onSimulationToggle={toggleSimulation}
+              currentStates={status}
+              loading={loading}
+              simulationEnabled={simulationMode}
+            />
+          )}
+          <div className="w-full max-w-sm min-w-0 space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Activity className="h-8 w-8 text-muted-foreground" />
+                <h1 className="text-2xl font-bold text-muted-foreground">
+                  N8N Launcher
+                </h1>
+              </div>
+            </div>
 
-					{/* Progress Display */}
-					{showProgress && (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between mb-3">
-									<h3 className="text-sm font-semibold text-foreground">
-										Starting N8N...
-									</h3>
-									<RefreshCw className="h-4 w-4 animate-spin text-primary" />
-								</div>
-								<div className="bg-black/20 rounded-lg">
-									<ScrollArea className="h-60 p-4">
-										<div className="font-mono text-xs">
-											{progressMessages.length > 0 ? (
-												<div className="space-y-1">
-													{progressMessages.map((message, index) => (
-														<div key={index} className="text-muted-foreground">
-															{message}
-														</div>
-													))}
-												</div>
-											) : (
-												<div className="text-muted-foreground">
-													Initializing...
-												</div>
-											)}
-										</div>
-									</ScrollArea>
-								</div>
-							</CardContent>
-						</Card>
-					)}
+            {/* Docker Installation Guide or System Status */}
+            {status.docker === "not-found" ? (
+              <DockerInstallGuide />
+            ) : loading && status.docker === "unknown" ? (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-6 space-y-3">
+                  <div className="flex items-center justify-center">
+                    <RefreshCw className="h-6 w-6 animate-spin text-primary mr-2" />
+                    <span className="text-muted-foreground">
+                      Checking Docker status...
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-6 space-y-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-foreground">
+                      System Status
+                    </h2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => checkDockerStatus()}
+                      disabled={loading}
+                      className="h-8 w-8"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                      />
+                    </Button>
+                  </div>
 
-					{/* Debug Info */}
-					{import.meta.env.DEV && showDebugInfo && (
-						<Card className="bg-gradient-card border-border/50">
-							<CardContent className="p-4">
-								<div className="flex items-center justify-between mb-3">
-									<h3 className="text-sm font-semibold text-foreground">
-										Debug Information
-									</h3>
-								</div>
-								<div className="bg-black/20 rounded-lg">
-									<ScrollArea className="h-60 p-4">
-										<div className="font-mono text-xs">
-											{debugInfo ? (
-												<pre className="whitespace-pre-wrap text-muted-foreground">
-													{debugInfo}
-												</pre>
-											) : (
-												<div className="text-muted-foreground">
-													No debug info available
-												</div>
-											)}
-										</div>
-									</ScrollArea>
-								</div>
-							</CardContent>
-						</Card>
-					)}
-					</div>
-				</div>
-			</ScrollArea>
-		</div>
-	);
+                  <StatusIndicator
+                    status={status.docker}
+                    label="Docker"
+                    className="bg-card/20"
+                  />
+                  <StatusIndicator
+                    status={status.n8n}
+                    label="N8N Service"
+                    className="bg-card/20"
+                  />
+
+                  {/* Show error message if present */}
+                  {errorMessage && (
+                    <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <p className="text-sm text-red-400">{errorMessage}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Controls */}
+            <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+              <CardContent className="p-6 space-y-4">
+                <h2 className="text-lg font-semibold text-foreground mb-4">
+                  Controls
+                </h2>
+
+                <div className="space-y-3">
+                  {getMainActionButton()}
+
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleViewLogs}
+                    disabled={logsLoading}
+                  >
+                    <FileText className="mr-2 h-5 w-5" />
+                    {logsLoading
+                      ? "Loading..."
+                      : showLogs
+                      ? "Hide Logs"
+                      : "View Logs"}
+                  </Button>
+
+                  {import.meta.env.DEV && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      onClick={handleDebugPaths}
+                    >
+                      <Bug className="mr-2 h-5 w-5" />
+                      {showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Info */}
+            {status.n8n === "running" && (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-4">
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      N8N is running on
+                    </p>
+                    <p className="text-primary font-mono text-lg">
+                      localhost:5678
+                    </p>
+                    <Button
+                      variant="link"
+                      className="text-sm h-auto p-0"
+                      onClick={async () => {
+                        try {
+                          await openUrl("http://localhost:5678");
+                        } catch (error) {
+                          console.error("Failed to open N8N interface:", error);
+                        }
+                      }}
+                    >
+                      Open N8N Interface →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Logs Preview */}
+            {showLogs && (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Docker Logs
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        setLogsLoading(true);
+                        try {
+                          await refreshLogs();
+                        } catch (error) {
+                          console.error("Failed to refresh logs:", error);
+                          const errorMsg =
+                            error instanceof Error
+                              ? error.message
+                              : "Failed to load logs. Make sure Docker Compose is running.";
+                          setLogs(errorMsg);
+                        } finally {
+                          setLogsLoading(false);
+                        }
+                      }}
+                      disabled={logsLoading}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 ${
+                          logsLoading ? "animate-spin" : ""
+                        }`}
+                      />
+                    </Button>
+                  </div>
+                  <div className="bg-black/20 rounded-lg w-full min-w-0">
+                    <ScrollArea className="h-60 p-4">
+                      <div className="font-mono text-xs w-full min-w-0">
+                        {logsLoading ? (
+                          <div className="text-muted-foreground">
+                            Loading logs...
+                          </div>
+                        ) : logs ? (
+                          <pre className="whitespace-pre-wrap text-muted-foreground break-words overflow-hidden">
+                            {logs}
+                          </pre>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            No logs available
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Start Progress Display */}
+            {showProgress && (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Starting N8N...
+                    </h3>
+                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                  </div>
+                  <div className="bg-black/20 rounded-lg w-full min-w-0">
+                    <ScrollArea className="h-60 px-4">
+                      <div className="font-mono text-xs w-full min-w-0 py-4">
+                        {progressMessages.length > 0 ? (
+                          <div className="space-y-1">
+                            {progressMessages.map((message, index) => (
+                              <div
+                                key={`progress-${index}-${message.slice(
+                                  0,
+                                  20
+                                )}`}
+                                className="text-muted-foreground break-words overflow-hidden w-[280px]"
+                              >
+                                {message}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            Initializing...
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Stop Progress Display */}
+            {showStopProgress && (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Stopping N8N...
+                    </h3>
+                    <RefreshCw className="h-4 w-4 animate-spin text-orange-500" />
+                  </div>
+                  <div className="bg-black/20 rounded-lg w-full min-w-0">
+                    <ScrollArea className="h-60 px-4">
+                      <div className="font-mono text-xs w-full min-w-0 py-4">
+                        {stopProgressMessages.length > 0 ? (
+                          <div className="space-y-1">
+                            {stopProgressMessages.map((message, index) => (
+                              <div
+                                key={`stop-progress-${index}-${message.slice(
+                                  0,
+                                  20
+                                )}`}
+                                className="text-muted-foreground break-words overflow-hidden w-[280px]"
+                              >
+                                {message}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            Stopping services...
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Debug Info */}
+            {import.meta.env.DEV && showDebugInfo && (
+              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Debug Information
+                    </h3>
+                  </div>
+                  <div className="bg-black/20 rounded-lg w-full min-w-0">
+                    <ScrollArea className="h-60 p-4">
+                      <div className="font-mono text-xs w-full min-w-0">
+                        {debugInfo ? (
+                          <pre className="whitespace-pre-wrap text-muted-foreground break-words overflow-hidden">
+                            {debugInfo}
+                          </pre>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            No debug info available
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
 }
