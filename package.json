@@ -15,6 +15,7 @@
 		"tauri:build:windows": "echo '❌ Cross-compilation to Windows not supported. Use GitHub Actions workflow for multi-platform builds.' && exit 1",
 		"tauri:build:linux": "echo '❌ Cross-compilation to Linux not supported. Use GitHub Actions workflow for multi-platform builds.' && exit 1",
 		"release": "echo 'Create a git tag to trigger GitHub Actions build: git tag v1.0.0 && git push origin v1.0.0'",
+		"icons": "bunx --bun @tauri-apps/cli icon app-icon.svg",
 		"lint": "bunx --bun biome check --write"
 	},
 	"devDependencies": {
