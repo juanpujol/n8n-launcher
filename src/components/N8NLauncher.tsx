@@ -5,7 +5,6 @@ import { useDockerStatus } from "@/hooks/useDockerStatus";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Activity,
-  Bug,
   Container,
   FileText,
   Play,
@@ -61,7 +60,6 @@ export function N8NLauncher() {
     startN8NWithProgress,
     stopN8NWithProgress,
     getLogs,
-    getDebugPaths,
     setManualState,
     setManualLoading,
     toggleSimulation,
@@ -70,8 +68,6 @@ export function N8NLauncher() {
   const [logs, setLogs] = useState<string>("");
   const [logsLoading, setLogsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const [progressMessages, setProgressMessages] = useState<string[]>([]);
   const [showProgress, setShowProgress] = useState(false);
   const [stopProgressMessages, setStopProgressMessages] = useState<string[]>(
@@ -167,20 +163,6 @@ export function N8NLauncher() {
     setShowLogs(!showLogs);
   };
 
-  const handleDebugPaths = async () => {
-    if (!showDebugInfo) {
-      try {
-        const paths = await getDebugPaths();
-        setDebugInfo(paths);
-      } catch (error) {
-        console.error("Failed to get debug paths:", error);
-        const errorMsg =
-          error instanceof Error ? error.message : "Failed to get debug info";
-        setDebugInfo(errorMsg);
-      }
-    }
-    setShowDebugInfo(!showDebugInfo);
-  };
 
   const getMainActionButton = () => {
     if (status.docker !== "running") {
@@ -332,17 +314,6 @@ export function N8NLauncher() {
                       : "View Logs"}
                   </Button>
 
-                  {import.meta.env.DEV && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                      onClick={handleDebugPaths}
-                    >
-                      <Bug className="mr-2 h-5 w-5" />
-                      {showDebugInfo ? "Hide Debug Info" : "Debug Paths"}
-                    </Button>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -513,33 +484,6 @@ export function N8NLauncher() {
               </Card>
             </AnimatedCard>
 
-            {/* Debug Info */}
-            {import.meta.env.DEV && showDebugInfo && (
-              <Card className="bg-gradient-card border-border/50 w-full min-w-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Debug Information
-                    </h3>
-                  </div>
-                  <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea className="h-60 p-4">
-                      <div className="font-mono text-xs w-full min-w-0">
-                        {debugInfo ? (
-                          <pre className="whitespace-pre-wrap text-muted-foreground break-words overflow-hidden">
-                            {debugInfo}
-                          </pre>
-                        ) : (
-                          <div className="text-muted-foreground">
-                            No debug info available
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </ScrollArea>

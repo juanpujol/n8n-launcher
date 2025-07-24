@@ -474,15 +474,6 @@ export function useDockerStatus() {
 		}
 	};
 
-	const getDebugPaths = async () => {
-		try {
-			const debugInfo = await invoke<string>("debug_paths");
-			return debugInfo;
-		} catch (error) {
-			console.error("Failed to get debug paths:", error);
-			throw new Error(`Failed to get debug paths: ${error}`);
-		}
-	};
 
 	useEffect(() => {
 		// Check status on mount
@@ -499,7 +490,6 @@ export function useDockerStatus() {
 		stopN8N,
 		stopN8NWithProgress,
 		getLogs,
-		getDebugPaths,
 		setManualState,
 		setManualLoading,
 		toggleSimulation,
