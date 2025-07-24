@@ -4,6 +4,13 @@ A cross-platform desktop application to easily start your local N8N instance. Th
 
 ![N8N Launcher Screenshot](app-print.jpg)
 
+## 🐳 Prerequisites
+
+**Docker Desktop must be installed and running** on your machine before using N8N Launcher. The application manages N8N through Docker containers.
+
+- **Download Docker Desktop**: [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
+- **Make sure Docker is running** before launching N8N Launcher
+
 ## ⚠️ Important Security Notice
 
 **N8N Launcher is a simple prototype built without official Apple or Microsoft code signing certificates.** This means your operating system will show security warnings when you first run the application.
