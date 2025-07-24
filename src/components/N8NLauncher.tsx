@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Square,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DockerInstallGuide } from "./DockerInstallGuide";
 import { StateController } from "./StateController";
 import { StatusIndicator } from "./StatusIndicator";
@@ -80,6 +80,41 @@ export function N8NLauncher() {
     []
   );
   const [showStopProgress, setShowStopProgress] = useState(false);
+
+  // Refs for auto-scrolling
+  const logsScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
+  const progressScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
+  const stopProgressScrollRef = useRef<React.ComponentRef<typeof ScrollArea>>(null);
+
+  // Auto-scroll helper function
+  const scrollToBottom = useCallback((ref: React.RefObject<React.ComponentRef<typeof ScrollArea> | null>) => {
+    if (ref.current) {
+      // Find the ScrollArea viewport which is the actual scrollable container
+      const viewport = ref.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    }
+  }, []);
+
+  // Auto-scroll effects
+  useEffect(() => {
+    if (logs) {
+      setTimeout(() => scrollToBottom(logsScrollRef), 100);
+    }
+  }, [logs, scrollToBottom]);
+
+  useEffect(() => {
+    if (progressMessages.length > 0) {
+      setTimeout(() => scrollToBottom(progressScrollRef), 100);
+    }
+  }, [progressMessages, scrollToBottom]);
+
+  useEffect(() => {
+    if (stopProgressMessages.length > 0) {
+      setTimeout(() => scrollToBottom(stopProgressScrollRef), 100);
+    }
+  }, [stopProgressMessages, scrollToBottom]);
 
   const refreshLogs = async () => {
     try {
@@ -386,7 +421,7 @@ export function N8NLauncher() {
                     </Button>
                   </div>
                   <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea className="h-60 p-4">
+                    <ScrollArea ref={logsScrollRef} className="h-60 p-4">
                       <div className="font-mono text-xs w-full min-w-0">
                         {logsLoading ? (
                           <div className="text-muted-foreground">
@@ -419,7 +454,7 @@ export function N8NLauncher() {
                     <RefreshCw className="h-4 w-4 animate-spin text-primary" />
                   </div>
                   <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea className="h-60 px-4">
+                    <ScrollArea ref={progressScrollRef} className="h-60 px-4">
                       <div className="font-mono text-xs w-full min-w-0 py-4">
                         {progressMessages.length > 0 ? (
                           <div className="space-y-1">
@@ -458,7 +493,7 @@ export function N8NLauncher() {
                     <RefreshCw className="h-4 w-4 animate-spin text-orange-500" />
                   </div>
                   <div className="bg-black/20 rounded-lg w-full min-w-0">
-                    <ScrollArea className="h-60 px-4">
+                    <ScrollArea ref={stopProgressScrollRef} className="h-60 px-4">
                       <div className="font-mono text-xs w-full min-w-0 py-4">
                         {stopProgressMessages.length > 0 ? (
                           <div className="space-y-1">
