@@ -194,7 +194,7 @@ jobs:
         if: matrix.platform == 'macos-15'
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.name }}
+          name: n8n-launcher-${{ needs.prepare-release.outputs.version }}-${{ matrix.name }}
           path: |
             src-tauri/target/*/release/bundle/dmg/*.dmg
             src-tauri/target/*/release/bundle/macos/*.app
@@ -203,7 +203,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.name }}
+          name: n8n-launcher-${{ needs.prepare-release.outputs.version }}-${{ matrix.name }}
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
@@ -230,14 +230,35 @@ jobs:
         run: |
           mkdir -p release-assets
           
-          # Copy binary files
-          find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) -exec cp {} release-assets/ \; || echo "No binary files found"
+          # Copy and rename binary files with friendly names
+          find artifacts -name "*.dmg" -type f | while read dmg; do
+            # Extract platform info from artifact path
+            if [[ "$dmg" == *"aarch64"* ]]; then
+              arch="aarch64"
+            else
+              arch="x86_64"
+            fi
+            cp "$dmg" "release-assets/n8n-launcher-${{ needs.prepare-release.outputs.version }}-macOS-$arch.dmg"
+          done || echo "No DMG files found"
           
-          # Zip macOS app bundles
+          find artifacts -name "*.msi" -type f | while read msi; do
+            cp "$msi" "release-assets/n8n-launcher-${{ needs.prepare-release.outputs.version }}-windows-x86_64.msi"
+          done || echo "No MSI files found"
+          
+          find artifacts -name "*.exe" -type f | while read exe; do
+            cp "$exe" "release-assets/n8n-launcher-${{ needs.prepare-release.outputs.version }}-windows-x86_64.exe"
+          done || echo "No EXE files found"
+          
+          # Zip macOS app bundles with friendly names
           find artifacts -name "*.app" -type d | while read app; do
-            app_name=$(basename "$app")
-            echo "Zipping $app as ${app_name%.*}-${{ needs.prepare-release.outputs.version }}.zip"
-            zip -r "release-assets/${app_name%.*}-${{ needs.prepare-release.outputs.version }}.zip" "$app"
+            # Extract architecture from path
+            if [[ "$app" == *"aarch64"* ]]; then
+              arch="aarch64"
+            else
+              arch="x86_64"
+            fi
+            echo "Zipping $app as n8n-launcher-${{ needs.prepare-release.outputs.version }}-macOS-$arch.zip"
+            zip -r "release-assets/n8n-launcher-${{ needs.prepare-release.outputs.version }}-macOS-$arch.zip" "$app"
           done || echo "No .app bundles found"
           
           echo "Final release assets:"
