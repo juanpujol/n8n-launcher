@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (optional, overrides version_type)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Setup Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Calculate new version
+        id: new_version
+        run: |
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+          else
+            CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+            MAJOR=${VERSION_PARTS[0]}
+            MINOR=${VERSION_PARTS[1]}
+            PATCH=${VERSION_PARTS[2]}
+            
+            case "${{ github.event.inputs.version_type }}" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version will be: $NEW_VERSION"
+          
+      - name: Update package.json version
+        run: |
+          bun run --bun -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ steps.new_version.outputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          
+      - name: Update Tauri version
+        run: |
+          bun run --bun -e "
+            const fs = require('fs');
+            const config = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            config.version = '${{ steps.new_version.outputs.version }}';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(config, null, 2) + '\n');
+          "
+          
+      - name: Update Cargo.toml version
+        run: |
+          sed -i '' 's/^version = ".*"/version = "${{ steps.new_version.outputs.version }}"/' src-tauri/Cargo.toml
+          
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --reverse)
+          fi
+          
+          # Create changelog content
+          CHANGELOG="## What's Changed in v${{ steps.new_version.outputs.version }}
+          
+          $COMMITS
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...v${{ steps.new_version.outputs.version }}"
+          
+          # Save changelog to file and output
+          echo "$CHANGELOG" > CHANGELOG.md
+          echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+          
+      - name: Build application
+        run: bun run tauri:build
+        
+      - name: Commit version changes
+        run: |
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+          git commit -m "chore: bump version to v${{ steps.new_version.outputs.version }}"
+          
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ steps.new_version.outputs.version }}" -m "Release v${{ steps.new_version.outputs.version }}"
+          git push origin main
+          git push origin "v${{ steps.new_version.outputs.version }}"
+          
+      - name: Prepare release assets
+        run: |
+          # Create a temporary directory for release assets
+          mkdir -p release-assets
+          
+          # Copy and rename DMG
+          cp "src-tauri/target/release/bundle/dmg/N8N Launcher_${{ steps.new_version.outputs.version }}_aarch64.dmg" \
+             "release-assets/N8N-Launcher-${{ steps.new_version.outputs.version }}-macOS-aarch64.dmg"
+          
+          # Zip and copy app bundle
+          cd "src-tauri/target/release/bundle/macos"
+          zip -r "../../../../release-assets/N8N-Launcher-${{ steps.new_version.outputs.version }}-macOS.app.zip" "N8N Launcher.app"
+          cd ../../../..
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          name: v${{ steps.new_version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          files: |
+            release-assets/N8N-Launcher-${{ steps.new_version.outputs.version }}-macOS-aarch64.dmg
+            release-assets/N8N-Launcher-${{ steps.new_version.outputs.version }}-macOS.app.zip
