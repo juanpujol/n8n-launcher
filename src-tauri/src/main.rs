@@ -9,16 +9,6 @@ use std::sync::Mutex;
 // Global storage for discovered Docker path
 static DOCKER_PATH: Mutex<Option<String>> = Mutex::new(None);
 
-fn get_docker_path() -> String {
-    if let Ok(path) = DOCKER_PATH.lock() {
-        if let Some(ref docker_path) = *path {
-            return docker_path.clone();
-        }
-    }
-    // Default fallback
-    "docker".to_string()
-}
-
 #[derive(Serialize, Deserialize)]
 struct DockerStatus {
     installed: bool,
@@ -37,8 +27,6 @@ async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, Stri
         "/opt/homebrew/bin/docker",  // ARM Homebrew location
         "/Applications/Docker.app/Contents/Resources/bin/docker", // Docker Desktop
     ];
-    
-    let mut last_error = String::new();
     
     for docker_path in docker_paths {
         let version_cmd = shell.command(docker_path).args(["--version"]);
@@ -70,27 +58,18 @@ async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, Stri
                         *path = Some(docker_path.to_string());
                     }
                     
-                    eprintln!("Found Docker at: {}", docker_path);
-                    eprintln!("Docker version: {}", version.trim());
-                    eprintln!("Docker running: {}", running);
-                    
                     return Ok(DockerStatus {
                         installed: true,
                         running,
                         version: Some(version.trim().to_string()),
                     });
-                } else {
-                    last_error = format!("Docker command failed at {}", docker_path);
-                    eprintln!("Docker command failed at {}", docker_path);
                 }
             }
-            Ok(Err(e)) => {
-                last_error = format!("Error executing docker at {}: {}", docker_path, e);
-                eprintln!("Error executing docker at {}: {}", docker_path, e);
+            Ok(Err(_)) => {
+                // Continue to next path
             }
             Err(_) => {
-                last_error = format!("Timeout executing docker at {}", docker_path);
-                eprintln!("Timeout executing docker at {}", docker_path);
+                // Timeout - continue to next path
             }
         }
     }
@@ -122,7 +101,6 @@ async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
                 if output.status.success() {
                     return Ok("N8N started successfully".to_string());
                 } else {
-                    let error = String::from_utf8_lossy(&output.stderr);
                     // Continue to next path on error
                     continue;
                 }

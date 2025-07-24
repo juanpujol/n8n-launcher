@@ -2,7 +2,7 @@
 	"$schema": "../node_modules/@tauri-apps/cli/schema.json",
 	"productName": "N8N Launcher",
 	"version": "0.1.0",
-	"identifier": "com.n8nlauncher.app",
+	"identifier": "com.n8nlauncher.launcher",
 	"build": {
 		"beforeBuildCommand": "bun run build",
 		"beforeDevCommand": "bun run dev",
