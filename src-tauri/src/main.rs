@@ -1,13 +1,88 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::command;
+use tauri::{command, Manager};
 use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::ShellExt;
 use std::sync::Mutex;
+use std::path::PathBuf;
 
 // Global storage for discovered Docker path
 static DOCKER_PATH: Mutex<Option<String>> = Mutex::new(None);
+
+fn get_docker_compose_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let mut search_paths = Vec::new();
+    
+    // Try to find docker-compose.yaml in the resource directory first (for built app)
+    if let Ok(resource_path) = app.path().resource_dir() {
+        let compose_path = resource_path.join("docker-compose.yaml");
+        search_paths.push(format!("Resource directory: {:?}", resource_path));
+        if compose_path.exists() {
+            return Ok(resource_path);
+        }
+    }
+    
+    // Try current directory (for development)
+    if let Ok(current_dir) = std::env::current_dir() {
+        let compose_path = current_dir.join("docker-compose.yaml");
+        search_paths.push(format!("Current directory: {:?}", current_dir));
+        if compose_path.exists() {
+            return Ok(current_dir);
+        }
+        
+        // Try project root (go up one level from src-tauri in development)
+        if let Some(project_root) = current_dir.parent() {
+            let compose_path = project_root.join("docker-compose.yaml");
+            search_paths.push(format!("Project root: {:?}", project_root));
+            if compose_path.exists() {
+                return Ok(project_root.to_path_buf());
+            }
+        }
+    }
+    
+    // Try going up from exe location (for built app edge cases)
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let compose_path = exe_dir.join("docker-compose.yaml");
+            search_paths.push(format!("Exe directory: {:?}", exe_dir));
+            if compose_path.exists() {
+                return Ok(exe_dir.to_path_buf());
+            }
+            
+            // Try parent of exe directory
+            if let Some(exe_parent) = exe_dir.parent() {
+                let compose_path = exe_parent.join("docker-compose.yaml");
+                search_paths.push(format!("Exe parent directory: {:?}", exe_parent));
+                if compose_path.exists() {
+                    return Ok(exe_parent.to_path_buf());
+                }
+            }
+        }
+    }
+    
+    // Try app local data directory as fallback
+    if let Ok(app_local_data_dir) = app.path().app_local_data_dir() {
+        let compose_path = app_local_data_dir.join("docker-compose.yaml");
+        search_paths.push(format!("App local data directory: {:?}", app_local_data_dir));
+        if compose_path.exists() {
+            return Ok(app_local_data_dir);
+        }
+    }
+    
+    // Try app data directory as fallback
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let compose_path = app_data_dir.join("docker-compose.yaml");
+        search_paths.push(format!("App data directory: {:?}", app_data_dir));
+        if compose_path.exists() {
+            return Ok(app_data_dir);
+        }
+    }
+    
+    Err(format!(
+        "docker-compose.yaml not found. Searched in:\n{}",
+        search_paths.join("\n- ")
+    ))
+}
 
 #[derive(Serialize, Deserialize)]
 struct DockerStatus {
@@ -94,6 +169,9 @@ async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, Stri
 async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
     
+    // Get the directory containing docker-compose.yaml
+    let compose_dir = get_docker_compose_dir(&app)?;
+    
     // Try multiple docker-compose locations (including Windows paths)
     let docker_compose_paths = vec![
         "docker-compose",
@@ -106,7 +184,9 @@ async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let mut last_error = String::new();
     
     for docker_compose_path in docker_compose_paths {
-        let cmd = shell.command(docker_compose_path).args(["up", "-d"]);
+        let cmd = shell.command(docker_compose_path)
+            .args(["up", "-d"])
+            .current_dir(&compose_dir);
         
         // Add timeout to prevent hanging
         let result = tokio::time::timeout(
@@ -144,6 +224,9 @@ async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
 async fn stop_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
     
+    // Get the directory containing docker-compose.yaml
+    let compose_dir = get_docker_compose_dir(&app)?;
+    
     // Try multiple docker-compose locations (including Windows paths)
     let docker_compose_paths = vec![
         "docker-compose",
@@ -156,7 +239,9 @@ async fn stop_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let mut last_error = String::new();
     
     for docker_compose_path in docker_compose_paths {
-        let cmd = shell.command(docker_compose_path).args(["down"]);
+        let cmd = shell.command(docker_compose_path)
+            .args(["down"])
+            .current_dir(&compose_dir);
         
         // Add timeout
         let result = tokio::time::timeout(
@@ -303,6 +388,9 @@ async fn check_n8n_status(app: tauri::AppHandle) -> Result<N8NStatus, String> {
 async fn get_n8n_logs(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
     
+    // Get the directory containing docker-compose.yaml
+    let compose_dir = get_docker_compose_dir(&app)?;
+    
     // Try multiple docker-compose locations (including Windows paths)
     let docker_compose_paths = vec![
         "docker-compose",
@@ -315,7 +403,9 @@ async fn get_n8n_logs(app: tauri::AppHandle) -> Result<String, String> {
     let mut last_error = String::new();
     
     for docker_compose_path in docker_compose_paths {
-        let cmd = shell.command(docker_compose_path).args(["logs", "--tail=100"]);
+        let cmd = shell.command(docker_compose_path)
+            .args(["logs", "--tail=100"])
+            .current_dir(&compose_dir);
         
         // Add timeout
         let result = tokio::time::timeout(
@@ -347,7 +437,52 @@ async fn get_n8n_logs(app: tauri::AppHandle) -> Result<String, String> {
     Err(format!("Failed to get logs. Last error: {}", last_error))
 }
 
+#[command]
+async fn debug_paths(app: tauri::AppHandle) -> Result<String, String> {
+    let mut debug_info = Vec::new();
+    
+    // Current working directory
+    if let Ok(current_dir) = std::env::current_dir() {
+        debug_info.push(format!("Current directory: {:?}", current_dir));
+    }
+    
+    // Executable path
+    if let Ok(exe_path) = std::env::current_exe() {
+        debug_info.push(format!("Executable path: {:?}", exe_path));
+    }
+    
+    // Resource directory
+    if let Ok(resource_path) = app.path().resource_dir() {
+        debug_info.push(format!("Resource directory: {:?}", resource_path));
+        
+        // List files in resource directory
+        if let Ok(entries) = std::fs::read_dir(&resource_path) {
+            let mut files = Vec::new();
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    files.push(format!("{:?}", entry.file_name()));
+                }
+            }
+            debug_info.push(format!("Files in resource directory: {:?}", files));
+        }
+    }
+    
+    // App data directories
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        debug_info.push(format!("App data directory: {:?}", app_data_dir));
+    }
+    
+    if let Ok(app_local_data_dir) = app.path().app_local_data_dir() {
+        debug_info.push(format!("App local data directory: {:?}", app_local_data_dir));
+    }
+    
+    Ok(debug_info.join("\n"))
+}
+
 fn main() {
+    // Fix PATH environment variable for bundled macOS apps
+    fix_path_env::fix().ok();
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
@@ -356,7 +491,8 @@ fn main() {
             check_n8n_status,
             start_n8n,
             stop_n8n,
-            get_n8n_logs
+            get_n8n_logs,
+            debug_paths
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
