@@ -274,3 +274,34 @@ jobs:
           prerelease: false
           files: release-assets/*
           fail_on_unmatched_files: false
+
+      - name: Update README download links
+        run: |
+          # Checkout the repository again to update README
+          git clone https://github.com/${{ github.repository }}.git repo-update
+          cd repo-update
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Update README with new download links
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          
+          # Update macOS download link
+          sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher_[^_]*_aarch64\.dmg|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-macOS-aarch64.dmg|g" README.md
+          
+          # Update Windows download link  
+          sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher_[^_]*_x64_en-US\.msi|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-windows-x86_64.msi|g" README.md
+          
+          # Check if README was actually changed
+          if git diff --quiet README.md; then
+            echo "No changes needed to README.md"
+          else
+            echo "README.md updated with new download links"
+            git add README.md
+            git commit -m "docs: update download links to v${VERSION}"
+            git push origin main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
