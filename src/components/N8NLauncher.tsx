@@ -149,6 +149,15 @@ export function N8NLauncher() {
           {/* Docker Installation Guide or System Status */}
           {status.docker === "not-found" ? (
             <DockerInstallGuide />
+          ) : loading && status.docker === "unknown" ? (
+            <Card className="bg-gradient-card border-border/50">
+              <CardContent className="p-6 space-y-3">
+                <div className="flex items-center justify-center">
+                  <RefreshCw className="h-6 w-6 animate-spin text-primary mr-2" />
+                  <span className="text-muted-foreground">Checking Docker status...</span>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <Card className="bg-gradient-card border-border/50">
               <CardContent className="p-6 space-y-3">

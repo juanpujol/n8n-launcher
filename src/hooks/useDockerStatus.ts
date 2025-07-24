@@ -19,10 +19,10 @@ export function useDockerStatus() {
 		docker: "unknown",
 		n8n: "unknown",
 	});
-	const [loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(true);
 	const [simulationMode, setSimulationMode] = useState(false);
 
-	const checkDockerStatus = async () => {
+	const checkDockerStatus = async (retryCount = 0) => {
 		if (simulationMode) return;
 
 		setLoading(true);
@@ -62,9 +62,21 @@ export function useDockerStatus() {
 			});
 		} catch (error) {
 			console.error("Failed to check Docker status:", error);
+			
+			// Retry up to 2 times on initial load if we haven't retried yet
+			if (retryCount < 2) {
+				console.log(`Retrying Docker status check (attempt ${retryCount + 1})`);
+				setTimeout(() => {
+					checkDockerStatus(retryCount + 1);
+				}, 1000);
+				return;
+			}
+			
+			// On error after retries, assume Docker is not found rather than unknown
+			// This prevents showing the wrong UI when there are invoke issues
 			setStatus({
-				docker: "unknown",
-				n8n: "unknown",
+				docker: "not-found",
+				n8n: "not-found",
 			});
 		} finally {
 			setLoading(false);

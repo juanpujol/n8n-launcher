@@ -45,6 +45,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: ${{ matrix.target }}
+          shared-key: "shared"
 
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -55,8 +57,26 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
+      - name: Import Code-Signing Certificates (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        uses: Apple-Actions/import-codesign-certs@v3
+        with:
+          # Create the secrets APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 and APPLE_DEVELOPER_CERTIFICATE_PASSWORD in your repository settings
+          p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+        continue-on-error: true
+
       - name: Build Tauri app
         run: bun run tauri build --target ${{ matrix.target }}
+        env:
+          # macOS code signing (optional - will skip if not provided)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Notarization (optional)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload artifacts (Linux)
         if: matrix.platform == 'linux'

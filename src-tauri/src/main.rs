@@ -4,6 +4,20 @@
 use tauri::command;
 use serde::{Deserialize, Serialize};
 use tauri_plugin_shell::ShellExt;
+use std::sync::Mutex;
+
+// Global storage for discovered Docker path
+static DOCKER_PATH: Mutex<Option<String>> = Mutex::new(None);
+
+fn get_docker_path() -> String {
+    if let Ok(path) = DOCKER_PATH.lock() {
+        if let Some(ref docker_path) = *path {
+            return docker_path.clone();
+        }
+    }
+    // Default fallback
+    "docker".to_string()
+}
 
 #[derive(Serialize, Deserialize)]
 struct DockerStatus {
@@ -16,59 +30,111 @@ struct DockerStatus {
 async fn check_docker_status(app: tauri::AppHandle) -> Result<DockerStatus, String> {
     let shell = app.shell();
     
-    // Check if Docker is installed
-    let version_cmd = shell.command("docker").args(["--version"]);
+    // Try multiple Docker locations since macOS apps don't inherit PATH
+    let docker_paths = vec![
+        "docker",                    // Try PATH first
+        "/usr/local/bin/docker",     // Common Homebrew location
+        "/opt/homebrew/bin/docker",  // ARM Homebrew location
+        "/Applications/Docker.app/Contents/Resources/bin/docker", // Docker Desktop
+    ];
     
-    match version_cmd.output().await {
-        Ok(output) => {
-            if output.status.success() {
-                let version = String::from_utf8_lossy(&output.stdout).to_string();
-                
-                // Check if Docker daemon is running
-                let ps_cmd = shell.command("docker").args(["ps"]);
-                
-                let running = match ps_cmd.output().await {
-                    Ok(ps_out) => ps_out.status.success(),
-                    Err(_) => false,
-                };
-                
-                Ok(DockerStatus {
-                    installed: true,
-                    running,
-                    version: Some(version.trim().to_string()),
-                })
-            } else {
-                Ok(DockerStatus {
-                    installed: false,
-                    running: false,
-                    version: None,
-                })
+    let mut last_error = String::new();
+    
+    for docker_path in docker_paths {
+        let version_cmd = shell.command(docker_path).args(["--version"]);
+        
+        // Add a reasonable timeout to prevent hanging
+        let version_result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            version_cmd.output()
+        ).await;
+        
+        match version_result {
+            Ok(Ok(output)) => {
+                if output.status.success() {
+                    let version = String::from_utf8_lossy(&output.stdout).to_string();
+                    
+                    // Check if Docker daemon is running using the same path
+                    let ps_cmd = shell.command(docker_path).args(["ps"]);
+                    
+                    let running = match tokio::time::timeout(
+                        std::time::Duration::from_secs(5),
+                        ps_cmd.output()
+                    ).await {
+                        Ok(Ok(ps_out)) => ps_out.status.success(),
+                        _ => false,
+                    };
+                    
+                    // Store the working Docker path for future use
+                    if let Ok(mut path) = DOCKER_PATH.lock() {
+                        *path = Some(docker_path.to_string());
+                    }
+                    
+                    eprintln!("Found Docker at: {}", docker_path);
+                    eprintln!("Docker version: {}", version.trim());
+                    eprintln!("Docker running: {}", running);
+                    
+                    return Ok(DockerStatus {
+                        installed: true,
+                        running,
+                        version: Some(version.trim().to_string()),
+                    });
+                } else {
+                    last_error = format!("Docker command failed at {}", docker_path);
+                    eprintln!("Docker command failed at {}", docker_path);
+                }
+            }
+            Ok(Err(e)) => {
+                last_error = format!("Error executing docker at {}: {}", docker_path, e);
+                eprintln!("Error executing docker at {}: {}", docker_path, e);
+            }
+            Err(_) => {
+                last_error = format!("Timeout executing docker at {}", docker_path);
+                eprintln!("Timeout executing docker at {}", docker_path);
             }
         }
-        Err(_) => Ok(DockerStatus {
-            installed: false,
-            running: false,
-            version: None,
-        }),
     }
+    
+    // If we get here, none of the Docker paths worked
+    Ok(DockerStatus {
+        installed: false,
+        running: false,
+        version: None,
+    })
 }
 
 #[command]
 async fn start_n8n(app: tauri::AppHandle) -> Result<String, String> {
     let shell = app.shell();
-    let cmd = shell.command("docker-compose").args(["up", "-d"]);
     
-    match cmd.output().await {
-        Ok(output) => {
-            if output.status.success() {
-                Ok("N8N started successfully".to_string())
-            } else {
-                let error = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Failed to start N8N: {}", error))
+    // Try multiple docker-compose locations
+    let docker_compose_paths = vec![
+        "docker-compose",
+        "/usr/local/bin/docker-compose",
+        "/opt/homebrew/bin/docker-compose",
+    ];
+    
+    for docker_compose_path in docker_compose_paths {
+        let cmd = shell.command(docker_compose_path).args(["up", "-d"]);
+        
+        match cmd.output().await {
+            Ok(output) => {
+                if output.status.success() {
+                    return Ok("N8N started successfully".to_string());
+                } else {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    // Continue to next path on error
+                    continue;
+                }
+            }
+            Err(_) => {
+                // Continue to next path on error
+                continue;
             }
         }
-        Err(e) => Err(format!("Failed to start N8N: {}", e)),
     }
+    
+    Err("Failed to start N8N: docker-compose not found in any expected location".to_string())
 }
 
 #[command]

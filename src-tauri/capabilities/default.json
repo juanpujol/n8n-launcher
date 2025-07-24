@@ -16,8 +16,38 @@
 					"sidecar": false
 				},
 				{
+					"name": "docker-usr-local",
+					"cmd": "/usr/local/bin/docker",
+					"args": ["--version", "ps"],
+					"sidecar": false
+				},
+				{
+					"name": "docker-homebrew",
+					"cmd": "/opt/homebrew/bin/docker",
+					"args": ["--version", "ps"],
+					"sidecar": false
+				},
+				{
+					"name": "docker-desktop",
+					"cmd": "/Applications/Docker.app/Contents/Resources/bin/docker",
+					"args": ["--version", "ps"],
+					"sidecar": false
+				},
+				{
 					"name": "docker-compose",
 					"cmd": "docker-compose",
+					"args": ["up", "down", "logs", "-d", "--tail=100"],
+					"sidecar": false
+				},
+				{
+					"name": "docker-compose-usr-local",
+					"cmd": "/usr/local/bin/docker-compose",
+					"args": ["up", "down", "logs", "-d", "--tail=100"],
+					"sidecar": false
+				},
+				{
+					"name": "docker-compose-homebrew",
+					"cmd": "/opt/homebrew/bin/docker-compose",
 					"args": ["up", "down", "logs", "-d", "--tail=100"],
 					"sidecar": false
 				}
