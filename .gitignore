@@ -1,0 +1,91 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
+
+# Rust compiled folders and build artifacts
+src-tauri/target/
+target/
+
+# Rust incremental compilation artifacts
+*.pdb
+
+# Tauri generated files
+src-tauri/gen/
+
+# Tauri cache directory
+.tauri/
+
+# Platform-specific bundles
+*.app
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.msi
+*.exe
+
+# Bundle directories
+bundle/
+src-tauri/target/release/bundle/
+src-tauri/target/debug/bundle/
+
+# Code signing artifacts
+*.sig
+
+# Platform-specific target directories
+target/release/
+target/debug/
+target/x86_64-*/
+target/aarch64-*/
+target/universal-*/
+target/*-pc-windows-msvc/
+target/*-apple-darwin/
+target/*-unknown-linux-gnu/
+
+# WIX installer temporary files (Windows)
+*.wixobj
+*.wixpdb
+
+# NSIS installer temporary files (Windows)
+*.nsis
+
+# Snap package temporary files (Linux)
+snap/
+
+# Temporary build files
+*.tmp
+*.temp
+
+# Debug symbols
+*.dSYM/

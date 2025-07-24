@@ -1,0 +1,24 @@
+{
+	"files": {
+		"ignore": [
+			"trigger/.trigger",
+			".wrangler",
+			"node_modules",
+			"worker-configuration.d.ts"
+		]
+	},
+	"organizeImports": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"correctness": {
+				"noUnusedImports": "error"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true
+	}
+}

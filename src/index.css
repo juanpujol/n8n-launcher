@@ -1,0 +1,143 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+	/* N8N Launcher Dark Theme Colors */
+	--color-background: hsl(240 10% 8%);
+	--color-foreground: hsl(240 10% 95%);
+	--color-card: hsl(240 8% 12%);
+	--color-card-foreground: hsl(240 10% 95%);
+	--color-popover: hsl(240 8% 12%);
+	--color-popover-foreground: hsl(240 10% 95%);
+	--color-primary: hsl(266 83% 58%);
+	--color-primary-foreground: hsl(240 10% 95%);
+	--color-secondary: hsl(240 8% 18%);
+	--color-secondary-foreground: hsl(240 10% 85%);
+	--color-muted: hsl(240 8% 18%);
+	--color-muted-foreground: hsl(240 5% 65%);
+	--color-accent: hsl(266 83% 58%);
+	--color-accent-foreground: hsl(240 10% 95%);
+	--color-destructive: hsl(0 84% 60%);
+	--color-destructive-foreground: hsl(240 10% 95%);
+	--color-success: hsl(142 76% 36%);
+	--color-success-foreground: hsl(240 10% 95%);
+	--color-warning: hsl(38 92% 50%);
+	--color-warning-foreground: hsl(240 10% 95%);
+	--color-border: hsl(240 8% 20%);
+	--color-input: hsl(240 8% 18%);
+	--color-ring: hsl(266 83% 58%);
+
+	/* Sidebar colors */
+	--color-sidebar: hsl(0 0% 98%);
+	--color-sidebar-foreground: hsl(240 5.3% 26.1%);
+	--color-sidebar-primary: hsl(240 5.9% 10%);
+	--color-sidebar-primary-foreground: hsl(0 0% 98%);
+	--color-sidebar-accent: hsl(240 4.8% 95.9%);
+	--color-sidebar-accent-foreground: hsl(240 5.9% 10%);
+	--color-sidebar-border: hsl(220 13% 91%);
+	--color-sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+	/* Chart colors */
+	--color-chart-1: hsl(220 70% 50%);
+	--color-chart-2: hsl(160 60% 45%);
+	--color-chart-3: hsl(30 80% 55%);
+	--color-chart-4: hsl(280 65% 60%);
+	--color-chart-5: hsl(340 75% 55%);
+
+	/* Background images - Migrated from Tailwind v3 config */
+	--background-image-gradient-primary: linear-gradient(135deg, hsl(266 83% 58%), hsl(266 100% 70%));
+	--background-image-gradient-background: linear-gradient(135deg, hsl(240 10% 8%), hsl(240 15% 12%));
+	--background-image-gradient-card: linear-gradient(145deg, hsl(240 8% 12%), hsl(240 12% 16%));
+
+	/* Border radius - Migrated from Tailwind v3 config */
+	--radius: 0.75rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+
+	/* Container configuration - Migrated from Tailwind v3 config */
+	--container-padding: 2rem;
+	--container-center: true;
+	--container-2xl: 1400px;
+
+	/* Animations */
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+/* Dark mode overrides - matches reference app's .dark class */
+@media (prefers-color-scheme: dark) {
+	@theme {
+		--color-background: hsl(222.2 84% 4.9%);
+		--color-foreground: hsl(210 40% 98%);
+		--color-card: hsl(222.2 84% 4.9%);
+		--color-card-foreground: hsl(210 40% 98%);
+		--color-popover: hsl(222.2 84% 4.9%);
+		--color-popover-foreground: hsl(210 40% 98%);
+		--color-primary: hsl(210 40% 98%);
+		--color-primary-foreground: hsl(222.2 47.4% 11.2%);
+		--color-secondary: hsl(217.2 32.6% 17.5%);
+		--color-secondary-foreground: hsl(210 40% 98%);
+		--color-muted: hsl(217.2 32.6% 17.5%);
+		--color-muted-foreground: hsl(215 20.2% 65.1%);
+		--color-accent: hsl(217.2 32.6% 17.5%);
+		--color-accent-foreground: hsl(210 40% 98%);
+		--color-destructive: hsl(0 62.8% 30.6%);
+		--color-destructive-foreground: hsl(210 40% 98%);
+		/* Keep success and warning from main theme - reference app doesn't override these */
+		--color-border: hsl(217.2 32.6% 17.5%);
+		--color-input: hsl(217.2 32.6% 17.5%);
+		--color-ring: hsl(212.7 26.8% 83.9%);
+		--color-sidebar: hsl(240 5.9% 10%);
+		--color-sidebar-foreground: hsl(240 4.8% 95.9%);
+		--color-sidebar-primary: hsl(224.3 76.3% 48%);
+		--color-sidebar-primary-foreground: hsl(0 0% 100%);
+		--color-sidebar-accent: hsl(240 3.7% 15.9%);
+		--color-sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+		--color-sidebar-border: hsl(240 3.7% 15.9%);
+		--color-sidebar-ring: hsl(217.2 91.2% 59.8%);
+	}
+}
+
+/* Custom animations */
+@keyframes accordion-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-accordion-content-height);
+	}
+}
+
+@keyframes accordion-up {
+	from {
+		height: var(--radix-accordion-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+/* Custom utilities for gradient backgrounds */
+@utility bg-gradient-background {
+	background-image: var(--background-image-gradient-background);
+}
+
+@utility bg-gradient-card {
+	background-image: var(--background-image-gradient-card);
+}
+
+@utility bg-gradient-primary {
+	background-image: var(--background-image-gradient-primary);
+}
+
+/* Base styles */
+* {
+	border-color: var(--color-border);
+}
+
+body {
+	background-color: var(--color-background);
+	color: var(--color-foreground);
+}

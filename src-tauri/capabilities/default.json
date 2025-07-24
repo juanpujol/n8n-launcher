@@ -1,0 +1,41 @@
+{
+	"identifier": "main-capability",
+	"description": "Main capability for Pocket N8N shell operations and opener plugin",
+	"windows": ["main"],
+	"permissions": [
+		"shell:allow-execute",
+		"shell:allow-spawn",
+		"opener:default",
+		{
+			"identifier": "shell:allow-execute",
+			"allow": [
+				{
+					"name": "docker",
+					"cmd": "docker",
+					"args": ["--version", "ps"],
+					"sidecar": false
+				},
+				{
+					"name": "docker-compose",
+					"cmd": "docker-compose",
+					"args": ["up", "down", "logs", "-d", "--tail=100"],
+					"sidecar": false
+				}
+			]
+		},
+		{
+			"identifier": "opener:allow-open-url",
+			"allow": [
+				{
+					"url": "http://localhost:5678"
+				},
+				{
+					"url": "https://desktop.docker.com/*"
+				},
+				{
+					"url": "https://docs.docker.com/*"
+				}
+			]
+		}
+	]
+}
