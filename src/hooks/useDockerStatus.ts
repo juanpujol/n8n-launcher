@@ -14,6 +14,13 @@ interface TauriDockerStatus {
 	version?: string;
 }
 
+interface N8NStatusResult {
+	running: boolean;
+	containers_exist: boolean;
+	images_available: boolean;
+	error_message?: string;
+}
+
 export function useDockerStatus() {
 	const [status, setStatus] = useState<DockerStatus>({
 		docker: "unknown",
@@ -46,8 +53,15 @@ export function useDockerStatus() {
 				if (dockerService === "running") {
 					// Check actual N8N container status
 					try {
-						const n8nRunning = await invoke<boolean>("check_n8n_status");
-						n8nService = n8nRunning ? "running" : "stopped";
+						const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+						
+						if (n8nStatus.running) {
+							n8nService = "running";
+						} else if (n8nStatus.containers_exist || n8nStatus.images_available) {
+							n8nService = "stopped";
+						} else {
+							n8nService = "unknown";
+						}
 					} catch (error) {
 						console.error("Failed to check N8N status:", error);
 						n8nService = "unknown";
@@ -120,14 +134,14 @@ export function useDockerStatus() {
 		try {
 			await invoke<string>("start_n8n");
 
-			// Poll until N8N is actually available
+			// Poll until N8N is actually available  
 			let attempts = 0;
-			const maxAttempts = 30; // 30 seconds max
+			const maxAttempts = 120; // 120 seconds max (increased for image downloads)
 
 			while (attempts < maxAttempts) {
 				try {
-					const n8nRunning = await invoke<boolean>("check_n8n_status");
-					if (n8nRunning) {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					if (n8nStatus.running) {
 						setStatus((prev) => ({ ...prev, n8n: "running" }));
 						break;
 					}
@@ -135,8 +149,8 @@ export function useDockerStatus() {
 					console.log("N8N not ready yet, retrying...");
 				}
 
-				// Refresh logs every few attempts if callback provided
-				if (onLogsRefresh && attempts % 3 === 0) {
+				// Refresh logs more frequently during startup if callback provided
+				if (onLogsRefresh && attempts % 2 === 0) {
 					try {
 						await onLogsRefresh();
 					} catch (logError) {
@@ -152,10 +166,10 @@ export function useDockerStatus() {
 			if (attempts >= maxAttempts) {
 				console.warn("N8N start timeout, checking final status");
 				try {
-					const n8nRunning = await invoke<boolean>("check_n8n_status");
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
 					setStatus((prev) => ({
 						...prev,
-						n8n: n8nRunning ? "running" : "unknown",
+						n8n: n8nStatus.running ? "running" : (n8nStatus.containers_exist || n8nStatus.images_available) ? "stopped" : "unknown",
 					}));
 				} catch (statusError) {
 					setStatus((prev) => ({ ...prev, n8n: "unknown" }));
@@ -173,7 +187,8 @@ export function useDockerStatus() {
 		} catch (error) {
 			console.error("Failed to start N8N:", error);
 			setStatus((prev) => ({ ...prev, n8n: "unknown" }));
-			throw error;
+			// Re-throw with more context
+			throw new Error(`Failed to start N8N: ${error}`);
 		} finally {
 			setLoading(false);
 		}
@@ -200,8 +215,8 @@ export function useDockerStatus() {
 
 			while (attempts < maxAttempts) {
 				try {
-					const n8nRunning = await invoke<boolean>("check_n8n_status");
-					if (!n8nRunning) {
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
+					if (!n8nStatus.running) {
 						setStatus((prev) => ({ ...prev, n8n: "stopped" }));
 						break;
 					}
@@ -228,10 +243,10 @@ export function useDockerStatus() {
 			if (attempts >= maxAttempts) {
 				console.warn("N8N stop timeout, checking final status");
 				try {
-					const n8nRunning = await invoke<boolean>("check_n8n_status");
+					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
 					setStatus((prev) => ({
 						...prev,
-						n8n: n8nRunning ? "running" : "stopped",
+						n8n: n8nStatus.running ? "running" : "stopped",
 					}));
 				} catch (statusError) {
 					setStatus((prev) => ({ ...prev, n8n: "stopped" }));
@@ -249,7 +264,8 @@ export function useDockerStatus() {
 		} catch (error) {
 			console.error("Failed to stop N8N:", error);
 			setStatus((prev) => ({ ...prev, n8n: "unknown" }));
-			throw error;
+			// Re-throw with more context
+			throw new Error(`Failed to stop N8N: ${error}`);
 		} finally {
 			setLoading(false);
 		}
@@ -261,7 +277,8 @@ export function useDockerStatus() {
 			return logs;
 		} catch (error) {
 			console.error("Failed to get logs:", error);
-			throw error;
+			// Return a more user-friendly error message
+			throw new Error(`Failed to get logs: ${error}`);
 		}
 	};
 
