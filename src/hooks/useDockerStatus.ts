@@ -55,10 +55,13 @@ export function useDockerStatus() {
 					// Check actual N8N container status
 					try {
 						const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
-						
+
 						if (n8nStatus.running) {
 							n8nService = "running";
-						} else if (n8nStatus.containers_exist || n8nStatus.images_available) {
+						} else if (
+							n8nStatus.containers_exist ||
+							n8nStatus.images_available
+						) {
 							n8nService = "stopped";
 						} else {
 							n8nService = "unknown";
@@ -120,7 +123,10 @@ export function useDockerStatus() {
 		}
 	};
 
-	const startN8NWithProgress = async (onProgress?: (message: string) => void, onLogsRefresh?: () => Promise<void>) => {
+	const startN8NWithProgress = async (
+		onProgress?: (message: string) => void,
+		onLogsRefresh?: () => Promise<void>,
+	) => {
 		if (simulationMode) {
 			// In simulation mode, just update the state
 			setLoading(true);
@@ -132,7 +138,7 @@ export function useDockerStatus() {
 		}
 
 		setLoading(true);
-		
+
 		// Listen for progress events
 		const unlisten = await listen<string>("docker-progress", (event) => {
 			if (onProgress) {
@@ -143,7 +149,7 @@ export function useDockerStatus() {
 		try {
 			await invoke<string>("start_n8n_streaming");
 
-			// Poll until N8N is actually available  
+			// Poll until N8N is actually available
 			let attempts = 0;
 			const maxAttempts = 60; // Reduced since we have real-time feedback now
 
@@ -178,7 +184,11 @@ export function useDockerStatus() {
 					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
 					setStatus((prev) => ({
 						...prev,
-						n8n: n8nStatus.running ? "running" : (n8nStatus.containers_exist || n8nStatus.images_available) ? "stopped" : "unknown",
+						n8n: n8nStatus.running
+							? "running"
+							: n8nStatus.containers_exist || n8nStatus.images_available
+								? "stopped"
+								: "unknown",
 					}));
 				} catch (statusError) {
 					setStatus((prev) => ({ ...prev, n8n: "unknown" }));
@@ -218,7 +228,7 @@ export function useDockerStatus() {
 		try {
 			await invoke<string>("start_n8n");
 
-			// Poll until N8N is actually available  
+			// Poll until N8N is actually available
 			let attempts = 0;
 			const maxAttempts = 120; // 120 seconds max (increased for image downloads)
 
@@ -253,7 +263,11 @@ export function useDockerStatus() {
 					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
 					setStatus((prev) => ({
 						...prev,
-						n8n: n8nStatus.running ? "running" : (n8nStatus.containers_exist || n8nStatus.images_available) ? "stopped" : "unknown",
+						n8n: n8nStatus.running
+							? "running"
+							: n8nStatus.containers_exist || n8nStatus.images_available
+								? "stopped"
+								: "unknown",
 					}));
 				} catch (statusError) {
 					setStatus((prev) => ({ ...prev, n8n: "unknown" }));
@@ -278,7 +292,10 @@ export function useDockerStatus() {
 		}
 	};
 
-	const stopN8NWithProgress = async (onProgress?: (message: string) => void, onLogsRefresh?: () => Promise<void>) => {
+	const stopN8NWithProgress = async (
+		onProgress?: (message: string) => void,
+		onLogsRefresh?: () => Promise<void>,
+	) => {
 		if (simulationMode) {
 			// In simulation mode, just update the state
 			setLoading(true);
@@ -294,7 +311,7 @@ export function useDockerStatus() {
 		}
 
 		setLoading(true);
-		
+
 		try {
 			if (onProgress) {
 				onProgress("Stopping N8N containers...");
@@ -308,7 +325,9 @@ export function useDockerStatus() {
 
 			while (attempts < maxAttempts) {
 				if (onProgress) {
-					onProgress(`Waiting for containers to stop... (${attempts + 1}/${maxAttempts})`);
+					onProgress(
+						`Waiting for containers to stop... (${attempts + 1}/${maxAttempts})`,
+					);
 				}
 
 				try {
@@ -352,7 +371,11 @@ export function useDockerStatus() {
 					const n8nStatus = await invoke<N8NStatusResult>("check_n8n_status");
 					const finalStatus = n8nStatus.running ? "running" : "stopped";
 					if (onProgress) {
-						onProgress(finalStatus === "running" ? "Warning: N8N may still be running" : "N8N stopped");
+						onProgress(
+							finalStatus === "running"
+								? "Warning: N8N may still be running"
+								: "N8N stopped",
+						);
 					}
 					setStatus((prev) => ({
 						...prev,
@@ -473,7 +496,6 @@ export function useDockerStatus() {
 			throw new Error(`Failed to get logs: ${error}`);
 		}
 	};
-
 
 	useEffect(() => {
 		// Check status on mount
