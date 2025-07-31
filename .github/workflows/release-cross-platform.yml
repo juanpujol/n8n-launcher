@@ -278,7 +278,7 @@ jobs:
       - name: Checkout repository for README update
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
 
       - name: Update README download links
@@ -326,4 +326,4 @@ jobs:
             echo "No README files needed updates"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
