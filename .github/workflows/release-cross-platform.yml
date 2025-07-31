@@ -285,23 +285,43 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Update README with new download links
+          # Update README files with new download links
           VERSION="${{ needs.prepare-release.outputs.version }}"
           
-          # Update macOS download link
-          sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher_[^_]*_aarch64\.dmg|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-macOS-aarch64.dmg|g" README.md
+          # List of README files to update
+          README_FILES=("README.md" "README_ES.md" "README_PT_BR.md")
+          CHANGED_FILES=()
           
-          # Update Windows download link  
-          sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher_[^_]*_x64_en-US\.msi|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-windows-x86_64.msi|g" README.md
+          for README_FILE in "${README_FILES[@]}"; do
+            if [ -f "$README_FILE" ]; then
+              echo "Updating $README_FILE..."
+              
+              # Update macOS download link (handle both old and new naming patterns)
+              sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher[_-][^_/]*[_-]aarch64\.dmg|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-macOS-aarch64.dmg|g" "$README_FILE"
+              
+              # Update Windows download link (handle both old and new naming patterns)
+              sed -i "s|https://github.com/juanpujol/n8n-launcher/releases/download/v[^/]*/n8n-launcher[_-][^_/]*[_-]x64[_-]en-US\.msi|https://github.com/juanpujol/n8n-launcher/releases/download/v${VERSION}/n8n-launcher-${VERSION}-windows-x86_64.msi|g" "$README_FILE"
+              
+              # Check if this README was changed
+              if ! git diff --quiet "$README_FILE"; then
+                echo "$README_FILE updated with new download links"
+                CHANGED_FILES+=("$README_FILE")
+              else
+                echo "No changes needed to $README_FILE"
+              fi
+            else
+              echo "$README_FILE not found, skipping..."
+            fi
+          done
           
-          # Check if README was actually changed
-          if git diff --quiet README.md; then
-            echo "No changes needed to README.md"
-          else
-            echo "README.md updated with new download links"
-            git add README.md
-            git commit -m "docs: update download links to v${VERSION}"
+          # Commit all changed files at once
+          if [ ${#CHANGED_FILES[@]} -gt 0 ]; then
+            echo "Committing changes to: ${CHANGED_FILES[*]}"
+            git add "${CHANGED_FILES[@]}"
+            git commit -m "docs: update download links to v${VERSION} in all README files"
             git push origin main
+          else
+            echo "No README files needed updates"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
