@@ -1,5 +1,7 @@
 # N8N Launcher
 
+[🇪🇸 Español](README_ES.md) | [🇧🇷 Português](README_PT_BR.md)
+
 A cross-platform desktop application to easily start your local N8N instance. This launcher provides a user-friendly interface for Docker container lifecycle management, status monitoring, and log viewing for a complete N8N stack.
 
 ![N8N Launcher Screenshot](app-print.jpg)
