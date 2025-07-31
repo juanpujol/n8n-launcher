@@ -278,7 +278,7 @@ jobs:
       - name: Update README download links
         run: |
           # Checkout the repository again to update README
-          git clone https://github.com/${{ github.repository }}.git repo-update
+          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git repo-update
           cd repo-update
           
           # Configure git
