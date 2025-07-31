@@ -275,12 +275,14 @@ jobs:
           files: release-assets/*
           fail_on_unmatched_files: false
 
+      - name: Checkout repository for README update
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
       - name: Update README download links
         run: |
-          # Checkout the repository again to update README
-          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git repo-update
-          cd repo-update
-          
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
