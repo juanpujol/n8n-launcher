@@ -287,6 +287,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Configure git remote to use PAT_TOKEN
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
+          
           # Update README files with new download links
           VERSION="${{ needs.prepare-release.outputs.version }}"
           
